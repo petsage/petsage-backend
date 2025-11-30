@@ -1,0 +1,38 @@
+Acknowledged. I am the PetSage Backend Feature Builder Agent.
+
+Processing request for feature: `smoke_test`. This is a system verification task to ensure the end-to-end pipeline is operational.
+
+I will now generate the complete FastAPI backend module, including Pydantic models, service logic, API router, and unit tests, all adhering to the PetSage System Blueprint.
+
+**System Generation Output:**
+
+```json
+{
+  "status": "SUCCESS",
+  "feature_name": "smoke_test",
+  "summary": "Successfully generated the smoke_test feature module.",
+  "file_structure": {
+    "petsage/features/smoke_test/__init__.py": "",
+    "petsage/features/smoke_test/models.py": "from pydantic import BaseModel, Field\n\n\nclass SmokeTestResponse(BaseModel):\n    \"\"\"\n    Response model for a successful smoke test.\n    \"\"\"\n    status: str = Field(..., example=\"ok\", description=\"The operational status of the endpoint.\")\n    message: str = Field(..., example=\"PetSage Smoke Test successful!\", description=\"A confirmatory message from the service.\")\n",
+    "petsage/features/smoke_test/service.py": "\"\"\"\nService layer for the Smoke Test feature.\n\nThis module contains the business logic for the smoke test, which is minimal.\n\"\"\"\nfrom typing import Dict, Any\n\ndef run_smoke_test() -> Dict[str, Any]:\n    \"\"\"\n    Executes the core logic for the smoke test.\n\n    Returns:\n        A dictionary containing the status and a success message.\n    \"\"\"\n    return {\n        \"status\": \"ok\",\n        \"message\": \"PetSage Smoke Test successful!\",\n    }\n",
+    "petsage/features/smoke_test/router.py": "\"\"\"\nAPI router for the Smoke Test feature.\n\"\"\"\nfrom fastapi import APIRouter, status\n\nfrom . import service\nfrom .models import SmokeTestResponse\n\nrouter = APIRouter(\n    prefix=\"/smoke-test\",\n    tags=[\"Smoke Test\"],\n)\n\n@router.get(\n    \"/\",\n    response_model=SmokeTestResponse,\n    status_code=status.HTTP_200_OK,\n    summary=\"Run a system smoke test\",\n    description=\"A simple endpoint to verify that the API is running and the feature \"\n                \"scaffolding is working correctly. This confirms the builder pipeline is operational.\"\n)\nasync def get_smoke_test():\n    \"\"\"\n    Endpoint to perform a simple health/smoke check of the PetSage service.\n    \"\"\"\n    result = service.run_smoke_test()\n    return result\n",
+    "petsage/features/smoke_test/tests/__init__.py": "",
+    "petsage/features/smoke_test/tests/test_smoke_test.py": "\"\"\"\nTests for the Smoke Test feature endpoint.\n\"\"\"\nfrom fastapi.testclient import TestClient\n# Note: This assumes 'app' is importable from a 'main.py' at the project root.\n# Your test setup may require adjustments to this import path.\nfrom ....main import app\n\nclient = TestClient(app)\n\n\ndef test_get_smoke_test_success():\n    \"\"\"\n    Tests the GET /smoke-test/ endpoint for a successful 200 OK response.\n    \"\"\"\n    # Arrange: The API prefix is assumed to be added in the main app configuration.\n    endpoint_url = \"/api/v1/smoke-test/\"\n    expected_status_code = 200\n    expected_json_response = {\n        \"status\": \"ok\",\n        \"message\": \"PetSage Smoke Test successful!\"\n    }\n\n    # Act\n    response = client.get(endpoint_url)\n\n    # Assert\n    assert response.status_code == expected_status_code\n    assert response.json() == expected_json_response\n    assert response.headers[\"content-type\"] == \"application/json\"\n",
+    "petsage/features/smoke_test/README.md": "# Smoke Test Feature\n\n## Description\n\nThis feature is a simple \"hello world\" endpoint designed to test the end-to-end functionality of the PetSage Backend Feature Builder Agent and the overall system pipeline. It provides a single GET endpoint that returns a static JSON response, confirming that the service is running and the feature routing is correctly configured.\n\n## API Endpoints\n\n### Run a system smoke test\n\n- **Endpoint:** `GET /api/v1/smoke-test/`\n- **Description:** A simple endpoint to verify that the API is running.\n- **Success Response (200 OK):**\n  ```json\n  {\n    \"status\": \"ok\",\n    \"message\": \"PetSage Smoke Test successful!\"\n  }\n  ```\n\n## File Structure\n\n```\nsmoke_test/\n├── __init__.py         # Makes the directory a Python package\n├── models.py           # Pydantic models for request/response data\n├── router.py           # FastAPI router and endpoint definitions\n├── service.py          # Business logic for the feature\n└── tests/\n    ├── __init__.py\n    └── test_smoke_test.py  # Pytest tests for the feature\n```\n\n## Integration into Orchestration Pipeline\n\nTo integrate this feature into the main PetSage application, add the following to your `main.py` file:\n\n```python\n# main.py\nfrom fastapi import FastAPI\nfrom petsage.features.smoke_test.router import router as smoke_test_router\n\napp = FastAPI(\n    title=\"PetSage API\",\n    description=\"Helping pets and their parents live their best lives.\",\n    version=\"1.0.0\"\n)\n\n# ... other application setup and routers\n\n# Include the smoke test router with a global API prefix\napp.include_router(smoke_test_router, prefix=\"/api/v1\")\n```\n\n## Running Tests\n\nTo run the tests for this specific feature, navigate to the project's root directory and execute pytest:\n\n```bash\npytest petsage/features/smoke_test/\n```\n"
+  },
+  "integration_instructions": {
+    "file": "petsage/main.py",
+    "action": "Ensure the following lines are present in your main application file to activate the feature.",
+    "code_snippets": [
+      {
+        "type": "import",
+        "code": "from petsage.features.smoke_test.router import router as smoke_test_router"
+      },
+      {
+        "type": "router_inclusion",
+        "code": "app.include_router(smoke_test_router, prefix=\"/api/v1\")"
+      }
+    ]
+  }
+}
+```
