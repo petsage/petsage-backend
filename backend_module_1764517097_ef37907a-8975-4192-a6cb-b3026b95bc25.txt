@@ -1,0 +1,236 @@
+Acknowledged. Payload received and decoded.
+
+`{"feature":"smoke_test","description":"Check system is alive","requirements":"none"}`
+
+Initiating build for feature: `smoke_test`. This is a high-priority system-level feature to ensure service availability and support monitoring orchestration.
+
+Following the PetSage System Blueprint, I will now generate the complete FastAPI module, including Pydantic models, API endpoint, integration steps, and unit tests.
+
+---
+
+### **PetSage Feature Build Report**
+
+*   **Feature ID:** `sys-001`
+*   **Feature Name:** `smoke_test`
+*   **Status:** `COMPLETE`
+
+---
+
+### **1. Proposed File Structure**
+
+The following files will be created or modified to implement the `smoke_test` feature. This structure maintains modularity and follows our system blueprint.
+
+```
+petsage_backend/
+├── app/
+│   ├── api/
+│   │   └── v1/
+│   │       ├── api.py                 # MODIFIED: To include the new system router
+│   │       └── endpoints/
+│   │           └── system.py          # CREATED: Health check endpoint logic
+│   ├── models/
+│   │   └── system.py                  # CREATED: Pydantic models for system responses
+│   └── main.py                        # MODIFIED: To include the main API router
+└── tests/
+    └── api/
+        └── v1/
+            └── test_system.py         # CREATED: Unit tests for the health check
+```
+
+---
+
+### **2. Pydantic Models**
+
+A response model ensures consistent, typed, and auto-documented API responses.
+
+**File:** `app/models/system.py`
+
+```python
+# app/models/system.py
+
+from pydantic import BaseModel, Field
+
+class HealthCheckResponse(BaseModel):
+    """
+    Pydantic model for the health check response.
+    Confirms that the PetSage system is operational.
+    """
+    status: str = Field(
+        ...,
+        example="ok",
+        description="Indicates the operational status of the service."
+    )
+    message: str = Field(
+        ...,
+        example="PetSage system is healthy.",
+        description="A confirmation message from the service."
+    )
+
+```
+
+---
+
+### **3. FastAPI Endpoint**
+
+This module contains the core logic for the `/health` endpoint. It's a simple, unauthenticated GET request.
+
+**File:** `app/api/v1/endpoints/system.py`
+
+```python
+# app/api/v1/endpoints/system.py
+
+from fastapi import APIRouter, status
+from app.models.system import HealthCheckResponse
+
+# Create a new router for system-level endpoints
+router = APIRouter()
+
+@router.get(
+    "/health",
+    response_model=HealthCheckResponse,
+    status_code=status.HTTP_200_OK,
+    tags=["System"],
+    summary="Perform a System Health Check",
+    description="Responds with a confirmation message if the PetSage API is running and healthy.",
+    responses={
+        200: {
+            "description": "System is healthy",
+            "content": {
+                "application/json": {
+                    "example": {"status": "ok", "message": "PetSage system is healthy."}
+                }
+            }
+        }
+    }
+)
+def perform_health_check() -> HealthCheckResponse:
+    """
+    Health Check Endpoint.
+
+    This endpoint is used by monitoring services (like Kubernetes liveness probes)
+    to verify that the application is running.
+
+    Returns:
+        HealthCheckResponse: A JSON object confirming the system's status.
+    """
+    return HealthCheckResponse(status="ok", message="PetSage system is healthy.")
+
+```
+
+---
+
+### **4. Orchestration Pipeline Integration**
+
+To make the new endpoint accessible, we must integrate its router into the main application.
+
+**File:** `app/api/v1/api.py` (Modify)
+
+```python
+# app/api/v1/api.py
+
+from fastapi import APIRouter
+from app.api.v1.endpoints import system # <--- ADD THIS LINE
+
+api_v1_router = APIRouter()
+
+# Include the new system router under the /api/v1 prefix
+api_v1_router.include_router(system.router, prefix="/system", tags=["System"]) # <--- ADD THIS LINE
+
+# ... include other existing routers here ...
+
+```
+
+**File:** `app/main.py` (Modify)
+
+```python
+# app/main.py
+
+from fastapi import FastAPI
+from app.api.v1.api import api_v1_router # <--- IMPORT THE V1 ROUTER
+
+# Initialize the FastAPI app with PetSage branding
+app = FastAPI(
+    title="PetSage API",
+    description="The official backend API for the PetSage platform.",
+    version="1.0.0"
+)
+
+# Include the main V1 router
+app.include_router(api_v1_router, prefix="/api/v1") # <--- ADD THIS LINE
+
+@app.get("/", include_in_schema=False)
+def read_root():
+    return {"message": "Welcome to the PetSage API"}
+
+```
+*Note: The path will resolve to `/api/v1/system/health` due to router prefixes.*
+
+---
+
+### **5. Unit Tests**
+
+A test case to ensure the endpoint is working as expected and maintains its contract. This will be run as part of our CI/CD pipeline.
+
+**File:** `tests/api/v1/test_system.py`
+
+```python
+# tests/api/v1/test_system.py
+
+from fastapi.testclient import TestClient
+from starlette import status
+
+from app.main import app
+
+client = TestClient(app)
+
+def test_health_check():
+    """
+    Tests the /api/v1/system/health endpoint.
+    Verifies the status code and the response body structure.
+    """
+    # GIVEN: The FastAPI application instance
+
+    # WHEN: A GET request is made to the health check endpoint
+    response = client.get("/api/v1/system/health")
+
+    # THEN: The response should be successful and correct
+    assert response.status_code == status.HTTP_200_OK
+
+    response_json = response.json()
+    assert response_json["status"] == "ok"
+    assert response_json["message"] == "PetSage system is healthy."
+
+```
+
+---
+
+### **6. Documentation & Usage**
+
+**Auto-Documentation:**
+The FastAPI framework automatically generates interactive API documentation. Once the server is running, the documentation for this new endpoint will be available at:
+*   **Swagger UI:** `http://<your_host>:8000/docs`
+*   **ReDoc:** `http://<your_host>:8000/redoc`
+
+**Manual Verification (cURL):**
+To test the endpoint manually from the command line:
+
+```bash
+curl -X GET "http://127.0.0.1:8000/api/v1/system/health" -H "accept: application/json"
+```
+
+**Expected Output:**
+
+```json
+{
+  "status": "ok",
+  "message": "PetSage system is healthy."
+}
+```
+
+---
+
+**Build Summary:**
+The `smoke_test` feature has been successfully designed and generated. All necessary components, including the endpoint, model, tests, and integration instructions, are provided above. The implementation adheres to PetSage branding and safety protocols by providing a secure, documented, and testable system-level function.
+
+**Agent:** PetSage Backend Feature Builder Agent
+**Status:** Task Complete. Awaiting next payload.
