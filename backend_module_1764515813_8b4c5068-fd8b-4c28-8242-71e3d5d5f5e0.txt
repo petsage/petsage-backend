@@ -1,0 +1,199 @@
+`STATUS: ACKNOWLEDGED`
+`AGENT: PetSage Backend Feature Builder Agent`
+`ACTION: Processing Payload`
+
+Hello. I am the PetSage Backend Feature Builder Agent. I have received and decoded the feature request.
+
+**Request Details:**
+*   **Feature:** `smoke_test`
+*   **Description:** "Ensure builder functional"
+*   **Requirements:** "none"
+
+My objective is to generate a complete, production-ready FastAPI module for a smoke test endpoint. This will serve as a basic health check to confirm the backend service is operational.
+
+I will now construct the feature following the PetSage System Blueprint.
+
+---
+
+### **1. Generated File Structure**
+
+Here is the complete file and directory structure for the new `smoke_test` feature.
+
+```plaintext
+petsage_backend/
+└── app/
+    ├── main.py                  # Main application entrypoint (updated)
+    ├── models/
+    │   ├── __init__.py
+    │   └── smoke_test.py        # Pydantic model for the response
+    └── routers/
+        ├── __init__.py
+        └── smoke_test.py        # FastAPI router with the endpoint logic
+└── tests/
+    ├── __init__.py
+    └── test_smoke_test.py       # Pytest tests for the new endpoint
+```
+
+---
+
+### **2. Pydantic Model**
+
+Pydantic models ensure our API responses are typed, validated, and consistently structured. They also power FastAPI's automatic interactive documentation.
+
+**File:** `app/models/smoke_test.py`
+```python
+# app/models/smoke_test.py
+
+from pydantic import BaseModel, Field
+
+class SmokeTestResponse(BaseModel):
+    """
+    Pydantic model for the smoke test response.
+    Ensures the response schema is consistent and well-documented.
+    """
+    message: str = Field(
+        ...,  # '...' denotes a required field
+        example="PetSage Backend is running.",
+        description="A simple success message to confirm API functionality."
+    )
+
+```
+
+---
+
+### **3. FastAPI Router**
+
+The logic for the endpoint is encapsulated within a dedicated `APIRouter`. This keeps our application modular and organized.
+
+**File:** `app/routers/smoke_test.py`
+```python
+# app/routers/smoke_test.py
+
+from fastapi import APIRouter
+from app.models.smoke_test import SmokeTestResponse
+
+router = APIRouter()
+
+@router.get(
+    "/smoke-test",
+    response_model=SmokeTestResponse,
+    tags=["Health Checks"],
+    summary="Perform a simple smoke test",
+    description="This endpoint is used to verify that the API is running and responsive. It serves as a basic health check and is essential for monitoring and deployment pipelines.",
+    operation_id="perform_smoke_test",
+)
+async def perform_smoke_test():
+    """
+    Confirms the API is operational by returning a static success message.
+
+    Returns:
+        SmokeTestResponse: A JSON object with a success message, adhering to the
+                         defined Pydantic model.
+    """
+    return {"message": "PetSage Backend is running."}
+
+```
+
+---
+
+### **4. Orchestration Pipeline Integration**
+
+To activate the new endpoint, its router must be included in the main FastAPI application instance.
+
+**File:** `app/main.py`
+```python
+# app/main.py
+
+from fastapi import FastAPI
+from app.routers import smoke_test  # Import the new router
+
+# --- PetSage Branding & Metadata ---
+API_TITLE = "PetSage Backend API"
+API_DESCRIPTION = "The core backend services for the PetSage application, providing AI-powered pet care advice and services."
+API_VERSION = "1.0.0"
+
+# --- Application Initialization ---
+app = FastAPI(
+    title=API_TITLE,
+    description=API_DESCRIPTION,
+    version=API_VERSION,
+    contact={
+        "name": "PetSage Development Team",
+        "url": "https://petsage.example.com",
+        "email": "dev@petsage.example.com",
+    },
+)
+
+# --- Router Integration ---
+# Integrate the new smoke test router into the application pipeline.
+# All routes from this router will be available under the /api/v1 prefix.
+app.include_router(
+    smoke_test.router,
+    prefix="/api/v1",
+    tags=["Health Checks"] # This tag groups the endpoint in the API docs
+)
+
+# --- Root Endpoint ---
+@app.get("/", tags=["Health Checks"])
+async def read_root():
+    """
+    Root endpoint providing a welcome message and a link to the docs.
+    """
+    return {
+        "message": f"Welcome to the {API_TITLE}",
+        "documentation": "/docs"
+    }
+```
+
+---
+
+### **5. Unit & Integration Tests**
+
+Testing is a critical part of the PetSage Blueprint. The following test ensures the smoke test endpoint behaves as expected.
+
+**File:** `tests/test_smoke_test.py`
+```python
+# tests/test_smoke_test.py
+
+from fastapi.testclient import TestClient
+from app.main import app
+
+# Create a client to interact with the FastAPI app in tests
+client = TestClient(app)
+
+def test_perform_smoke_test_success():
+    """
+    Tests the /api/v1/smoke-test endpoint for a successful response.
+
+    Verifies:
+    - The HTTP status code is 200 OK.
+    - The response body matches the expected JSON structure and content.
+    - The Content-Type header is correct.
+    """
+    # --- Arrange ---
+    endpoint_url = "/api/v1/smoke-test"
+    expected_status_code = 200
+    expected_response_json = {"message": "PetSage Backend is running."}
+
+    # --- Act ---
+    response = client.get(endpoint_url)
+
+    # --- Assert ---
+    assert response.status_code == expected_status_code, \
+        f"Expected status code {expected_status_code}, but got {response.status_code}"
+    assert response.json() == expected_response_json, \
+        f"Expected JSON {expected_response_json}, but got {response.json()}"
+    assert "application/json" in response.headers["content-type"], \
+        "Content-Type header is not application/json"
+
+```
+
+### **6. Documentation & Safety**
+
+*   **Automatic Documentation:** By using FastAPI, Pydantic, and descriptive docstrings/parameters, interactive API documentation is automatically generated and available at the `/docs` and `/redoc` endpoints of the running application.
+*   **Safety:** This endpoint is safe by design. It is a `GET` request, making it idempotent and free of side effects. It exposes no internal state, user data, or system information, adhering to PetSage safety protocols.
+
+---
+
+`STATUS: COMPLETE`
+`MESSAGE: The 'smoke_test' feature has been successfully built and is ready for deployment.`
