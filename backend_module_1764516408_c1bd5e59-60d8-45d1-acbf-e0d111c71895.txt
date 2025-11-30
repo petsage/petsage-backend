@@ -1,0 +1,310 @@
+Greetings. I am the PetSage Backend Feature Builder Agent.
+
+I have received and decoded your request payload. The task is to build a `smoke_test` feature to validate the end-to-end builder pipeline. I will now generate the complete FastAPI backend module for this feature, adhering to the PetSage System Blueprint.
+
+The generated assets will include Pydantic models, a layered service architecture, a dedicated router, comprehensive tests, and documentation.
+
+---
+
+### **Feature Build Plan: `smoke_test`**
+
+1.  **Objective**: Create a simple endpoint to verify the backend system and build pipeline are operational.
+2.  **Endpoint**: `GET /api/v1/smoke-test`
+3.  **Functionality**: Returns a success message, confirming the service is alive. It will also echo back an optional query parameter.
+4.  **Architecture**: Follows the standard PetSage layered architecture: `Router` -> `Service` -> `Models`.
+5.  **Deliverables**: A complete set of files for the feature, including tests and integration instructions.
+
+---
+
+### **Generated Feature Files**
+
+Below is the complete file structure and content for the new `smoke_test` feature.
+
+#### **1. File Structure**
+
+```plaintext
+petsage_backend/
+└── src/
+    ├── api/
+    │   ├── models/
+    │   │   └── smoke_test_models.py      # Pydantic models for the feature
+    │   ├── routers/
+    │   │   └── smoke_test_router.py      # FastAPI router and endpoint definition
+    │   ├── services/
+    │   │   └── smoke_test_service.py     # Business logic for the feature
+    │   └── main.py                       # Instructions for integration
+    └── tests/
+        └── test_smoke_test.py            # Pytest tests for the feature
+```
+
+---
+
+#### **2. Pydantic Models**
+
+This file defines the data structures for our feature. A response model ensures our API contract is clear and consistent.
+
+**File:** `src/api/models/smoke_test_models.py`
+```python
+"""
+Pydantic Models for the Smoke Test Feature.
+
+This module defines the data structures used for API responses
+in the smoke_test feature. Following the PetSage blueprint, all
+data transfer objects (DTOs) are centralized here.
+"""
+from pydantic import BaseModel, Field
+
+
+class SmokeTestResponse(BaseModel):
+    """
+    Defines the successful response schema for the smoke test endpoint.
+    """
+    status: str = Field(
+        ...,
+        example="ok",
+        description="The operational status of the service."
+    )
+    message: str = Field(
+        ...,
+        example="PetSage smoke test successful! Pipeline is purrfect.",
+        description="A confirmation message from the service."
+    )
+    echo: str | None = Field(
+        None,
+        example="Hello from the test suite!",
+        description="An echoed value from the request's query parameter, if provided."
+    )
+
+    class Config:
+        # Provides an example for OpenAPI documentation
+        schema_extra = {
+            "example": {
+                "status": "ok",
+                "message": "PetSage smoke test successful! Pipeline is purrfect.",
+                "echo": "Hello PetSage!"
+            }
+        }
+
+```
+
+---
+
+#### **3. Service Layer**
+
+This file contains the core business logic. Even for a simple feature, separating logic from the routing layer makes the system more testable and maintainable.
+
+**File:** `src/api/services/smoke_test_service.py`
+```python
+"""
+Service Layer for the Smoke Test Feature.
+
+This module contains the business logic for the smoke test.
+The service is designed to be self-contained and easily testable,
+independent of the web framework.
+"""
+
+from src.api.models.smoke_test_models import SmokeTestResponse
+
+
+class SmokeTestService:
+    """
+    A service class to encapsulate the smoke test logic.
+    """
+
+    def run_smoke_test(self, echo_value: str | None) -> dict:
+        """
+        Executes the smoke test logic.
+
+        Args:
+            echo_value: An optional string to be echoed in the response.
+
+        Returns:
+            A dictionary conforming to the SmokeTestResponse model.
+        """
+        response_data = {
+            "status": "ok",
+            "message": "PetSage smoke test successful! Pipeline is purrfect.",
+            "echo": echo_value
+        }
+        # In a real feature, this is where you would interact with databases,
+        # call other services, or perform complex calculations.
+        return response_data
+
+# Create a singleton instance of the service for dependency injection
+smoke_test_service = SmokeTestService()
+```
+
+---
+
+#### **4. Router Layer**
+
+This file defines the API endpoint, handles HTTP requests and responses, and uses dependency injection to call the service layer.
+
+**File:** `src/api/routers/smoke_test_router.py`
+```python
+"""
+API Router for the Smoke Test Feature.
+
+This module defines the HTTP endpoints related to the smoke test.
+It follows the PetSage blueprint by depending on the service layer
+for business logic and using Pydantic models for data validation.
+"""
+from fastapi import APIRouter, Depends, Query
+from src.api.models.smoke_test_models import SmokeTestResponse
+from src.api.services.smoke_test_service import SmokeTestService, smoke_test_service
+
+# Create a new router instance for this feature
+router = APIRouter(
+    prefix="/smoke-test",
+    tags=["System Health"],
+    responses={404: {"description": "Not found"}},
+)
+
+
+# Define the endpoint
+@router.get(
+    "",
+    response_model=SmokeTestResponse,
+    summary="Perform a System Smoke Test",
+    description="This endpoint verifies that the API is running correctly and the deployment pipeline is functional."
+)
+async def perform_smoke_test(
+    echo: str | None = Query(
+        None,
+        title="Echo Parameter",
+        description="An optional string that the server will echo back in the response."
+    ),
+    service: SmokeTestService = Depends(lambda: smoke_test_service)
+) -> SmokeTestResponse:
+    """
+    Handles the GET request for the smoke test.
+
+    It uses FastAPI's dependency injection (`Depends`) to get an instance
+    of the SmokeTestService and then calls its method to get the result.
+
+    Args:
+        echo: Optional query parameter to be echoed.
+        service: The injected SmokeTestService instance.
+
+    Returns:
+        A JSON response conforming to the SmokeTestResponse model.
+    """
+    result = service.run_smoke_test(echo_value=echo)
+    return SmokeTestResponse(**result)
+
+```
+
+---
+
+#### **5. Integration into `main.py`**
+
+To activate the new endpoint, you must include its router in your main FastAPI application file.
+
+**File:** `src/api/main.py` (Instructions for modification)
+```python
+# src/api/main.py
+
+from fastapi import FastAPI
+from src.api.routers import smoke_test_router # 1. IMPORT the new router
+
+# PetSage Branding and Metadata
+app = FastAPI(
+    title="PetSage API",
+    description="The official backend API for the PetSage platform.",
+    version="1.0.0",
+)
+
+# --- Router Integration ---
+# Include the new smoke_test_router into the main application.
+# It will be available at the `/api/v1/smoke-test` prefix.
+app.include_router(
+    smoke_test_router.router,
+    prefix="/api/v1"
+) # 2. INCLUDE the new router
+
+# Add other routers for other features here...
+
+
+@app.get("/", tags=["Root"])
+async def read_root():
+    return {"message": "Welcome to the PetSage API!"}
+
+```
+
+---
+
+#### **6. Feature Tests**
+
+This file provides tests for the new feature, ensuring its correctness and preventing future regressions. It tests both the API endpoint and the service layer logic.
+
+**File:** `tests/test_smoke_test.py`
+```python
+"""
+Tests for the Smoke Test Feature.
+
+This module contains pytest tests for the smoke_test API endpoint
+and its underlying service logic, ensuring reliability and correctness.
+"""
+import pytest
+from fastapi.testclient import TestClient
+from src.api.main import app  # Use the main app to ensure full integration is tested
+from src.api.services.smoke_test_service import SmokeTestService
+
+# Initialize the test client
+client = TestClient(app)
+
+
+def test_smoke_test_endpoint_success_no_echo():
+    """
+    Tests the GET /api/v1/smoke-test endpoint without any query parameters.
+    """
+    response = client.get("/api/v1/smoke-test")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert "successful" in data["message"]
+    assert data["echo"] is None
+
+
+def test_smoke_test_endpoint_success_with_echo():
+    """
+    Tests the GET /api/v1/smoke-test endpoint with an 'echo' query parameter.
+    """
+    echo_param = "Hello, PetSage!"
+    response = client.get(f"/api/v1/smoke-test?echo={echo_param}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["echo"] == echo_param
+
+
+@pytest.mark.parametrize("echo_value", [None, "Test String", "12345"])
+def test_smoke_test_service_logic(echo_value: str | None):
+    """
+    Tests the SmokeTestService logic in isolation.
+
+    This unit test ensures the business logic is correct, independent of the
+    HTTP layer. It is parameterized to check multiple input cases.
+    """
+    service = SmokeTestService()
+    result = service.run_smoke_test(echo_value=echo_value)
+
+    assert isinstance(result, dict)
+    assert result["status"] == "ok"
+    assert "purrfect" in result["message"]
+    assert result["echo"] == echo_value
+
+```
+
+---
+
+### **Summary & Next Steps**
+
+The `smoke_test` feature has been successfully built according to the PetSage System Blueprint. All required files, including router, service, models, and tests, have been generated.
+
+**To deploy this feature:**
+1.  Place the generated files into their respective directories within the `petsage_backend` project.
+2.  Apply the modification to `src/api/main.py` to register the new router.
+3.  Run the test suite using `pytest` to confirm that the new feature is working as expected and has not introduced any regressions.
+
+This build is now complete. I am ready for the next feature request.
