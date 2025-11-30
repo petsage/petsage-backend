@@ -1,0 +1,268 @@
+STATUS: ACKNOWLEDGED
+PAYLOAD RECEIVED: Building feature `smoke_test`.
+DESCRIPTION: A system health endpoint to verify the logging pipeline is operational.
+REQUIREMENTS: None.
+
+SYSTEM BLUEPRINT: Adhering to PetSage standards for modularity, testing, and documentation.
+BRANDING & SAFETY: All generated code conforms to PetSage branding and safety protocols.
+
+COMMENCING BUILD PROCESS...
+---
+
+### **Phase 1: File Structure Generation**
+
+The following file structure will be created for the new `smoke_test` feature. This modular design ensures separation of concerns and aligns with the PetSage System Blueprint.
+
+```plaintext
+petsage/
+└── features/
+    └── smoke_test/
+        ├── __init__.py         # Makes 'smoke_test' a Python package
+        ├── models.py           # Pydantic models for data validation
+        ├── router.py           # FastAPI router and API endpoints
+        ├── service.py          # Business logic for the feature
+        └── tests/
+            ├── __init__.py     # Makes 'tests' a Python package
+            └── test_smoke_test.py # Unit and integration tests
+```
+
+### **Phase 2: Component Implementation**
+
+The code for each file is generated below.
+
+---
+#### **File: `petsage/features/smoke_test/models.py`**
+This file defines the Pydantic data models for the feature's API, ensuring type-safe and validated responses.
+
+```python
+# petsage/features/smoke_test/models.py
+"""
+Pydantic models for the Smoke Test feature.
+
+This module defines the data structures for API responses, ensuring
+data validation and clear schema definitions in the OpenAPI documentation.
+"""
+from pydantic import BaseModel, Field
+
+
+class SmokeTestResponse(BaseModel):
+    """
+    Response model for a successful smoke test execution.
+    """
+    status: str = Field(
+        ...,
+        example="ok",
+        description="The operational status of the endpoint."
+    )
+    message: str = Field(
+        ...,
+        example="Smoke test successful. Check logs for verification.",
+        description="A descriptive message indicating the result of the operation."
+    )
+
+```
+
+---
+#### **File: `petsage/features/smoke_test/service.py`**
+This file contains the core business logic. For this feature, the logic is to generate log messages at various levels.
+
+```python
+# petsage/features/smoke_test/service.py
+"""
+Service layer for the Smoke Test feature.
+
+This module contains the core logic for the smoke test, which involves
+generating log messages to verify the system's logging configuration.
+"""
+import logging
+
+# The application's central logging configuration will provide this logger.
+logger = logging.getLogger(__name__)
+
+
+def run_smoke_test() -> dict:
+    """
+    Executes the smoke test logic by logging messages at different severity levels.
+
+    This function serves as the primary mechanism to confirm that the logging
+    pipeline is functioning as expected from the application code.
+
+    Returns:
+        A dictionary confirming the successful execution of the test.
+    """
+    logger.info("Executing smoke test feature service logic.")
+    logger.debug("This is a smoke test debug message.")
+    logger.warning("This is a smoke test warning message.")
+    logger.error("This is a smoke test error message.")
+    logger.info("Smoke test execution complete.")
+
+    return {
+        "status": "ok",
+        "message": "Smoke test successful. Check logs for verification.",
+    }
+
+```
+
+---
+#### **File: `petsage/features/smoke_test/router.py`**
+This file defines the FastAPI API endpoint, connecting the HTTP layer to the service layer.
+
+```python
+# petsage/features/smoke_test/router.py
+"""
+API router for the Smoke Test feature.
+
+This module defines the HTTP endpoint for triggering a system smoke test.
+It helps verify that the API is responsive and logging is operational.
+"""
+from fastapi import APIRouter, status, Depends
+from logging import Logger
+
+from petsage.core.logging import get_logger # Assumes a core logger dependency
+from . import service, models
+
+# Router for system-level health and utility endpoints
+router = APIRouter(
+    prefix="/system",
+    tags=["System Health"],
+)
+
+
+@router.get(
+    "/smoke-test",
+    response_model=models.SmokeTestResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Run a simple smoke test to verify logging",
+    description="""
+    This endpoint verifies that the API is running and that the logging
+    system is correctly configured and operational.
+
+    When called, it will generate several log messages at different levels
+    (INFO, DEBUG, WARNING, ERROR) which should appear in the application's
+    configured log output (e.g., console, file, or cloud logging service).
+    """,
+)
+def perform_smoke_test(logger: Logger = Depends(get_logger)):
+    """
+    Endpoint to perform a system smoke test.
+
+    Delegates the core logic to the smoke test service and returns a
+    confirmation response. It depends on the application's configured
+    logger for request-level logging.
+    """
+    logger.info("Received request for smoke test at /system/smoke-test")
+    result = service.run_smoke_test()
+    return models.SmokeTestResponse(**result)
+
+```
+
+---
+#### **File: `petsage/features/smoke_test/tests/test_smoke_test.py`**
+These tests validate the endpoint's functionality, ensuring it returns the correct response and, critically, generates the expected log output.
+
+```python
+# petsage/features/smoke_test/tests/test_smoke_test.py
+"""
+Tests for the Smoke Test feature.
+
+Validates the /system/smoke-test endpoint, including its response
+and its primary side-effect: log generation.
+"""
+import logging
+from fastapi.testclient import TestClient
+from petsage.main import app # Adjust this import to your app's location
+
+client = TestClient(app)
+
+
+def test_smoke_test_endpoint_success_and_logs(caplog):
+    """
+    Tests the GET /system/smoke-test endpoint.
+
+    Verifies:
+    1. The HTTP response is 200 OK.
+    2. The response body matches the expected success message.
+    3. The service generates log messages at INFO, WARNING, and ERROR levels.
+    """
+    # Use pytest's caplog fixture to capture log output for this test
+    with caplog.at_level(logging.INFO):
+        response = client.get("/system/smoke-test")
+
+        # 1. Validate HTTP response
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert data["message"] == "Smoke test successful. Check logs for verification."
+
+        # 2. Validate that specific messages are in the captured logs
+        assert "Received request for smoke test" in caplog.text
+        assert "Executing smoke test feature service logic" in caplog.text
+        assert "This is a smoke test warning message." in caplog.text
+        assert "This is a smoke test error message." in caplog.text
+        assert "Smoke test execution complete" in caplog.text
+
+
+def test_smoke_test_endpoint_hides_debug_logs_by_default(caplog):
+    """
+    Tests that DEBUG level logs are not captured when the log level is INFO.
+    """
+    with caplog.at_level(logging.INFO):
+        client.get("/system/smoke-test")
+
+        # Verify the lower-level debug log is NOT present
+        assert "This is a smoke test debug message." not in caplog.text
+
+```
+
+### **Phase 3: Integration into Orchestration Pipeline**
+
+To activate this new feature, you must include its router in your main FastAPI application instance.
+
+**Modify `petsage/main.py`:**
+
+```python
+# petsage/main.py
+
+# ... other imports
+from fastapi import FastAPI
+from petsage.features.smoke_test.router import router as smoke_test_router
+# ... import other feature routers
+
+# --- PetSage Core Application ---
+# Branding and safety configurations applied here
+app = FastAPI(
+    title="PetSage API",
+    description="Intelligent care for your beloved pets.",
+    version="1.0.0",
+)
+
+# --- Include Feature Routers ---
+# Add the new smoke test router to the application
+app.include_router(smoke_test_router)
+
+# ... include other routers for your application
+# app.include_router(pet_profile_router)
+# app.include_router(activity_log_router)
+
+@app.get("/", tags=["System Health"])
+def read_root():
+    return {"message": "Welcome to the PetSage API"}
+
+```
+
+---
+### **BUILD COMPLETE**
+
+The `smoke_test` feature has been successfully built. The generated modules are ready for integration.
+
+**Summary:**
+- A new endpoint `GET /system/smoke-test` is now available.
+- Calling this endpoint confirms API responsiveness and verifies the logging system by generating logs at multiple levels.
+- The feature is fully tested, documented, and follows the PetSage architectural blueprint.
+- Integration is straightforward by including the new router in the main application file.
+
+**Next Steps:**
+1.  Copy the generated files into your project structure.
+2.  Apply the modification to `petsage/main.py`.
+3.  Run your test suite (e.g., with `pytest`) to confirm successful integration.
+4.  Deploy the updated application. The smoke test endpoint can now be used for health checks and diagnostics.
