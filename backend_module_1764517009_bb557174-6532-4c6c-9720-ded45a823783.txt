@@ -1,0 +1,254 @@
+`STATUS: PROCESSING PAYLOAD`
+`AGENT: PetSage Backend Feature Builder`
+`TASK: Generate FastAPI Module`
+`TIMESTAMP: 2023-10-27T10:30:00Z`
+
+... Payload decoded successfully.
+... Feature request identified: `smoke_test`
+... Description: "Check system is alive"
+... Requirements: "none"
+
+`STATUS: INITIATING BUILD PROCESS`
+
+Greetings. I am the PetSage Backend Feature Builder Agent. I have processed your request and will now construct the requested `smoke_test` feature module in accordance with the PetSage System Blueprint.
+
+The purpose of this module is to provide a simple, unauthenticated health check endpoint. This is crucial for monitoring, load balancing, and ensuring the system is operational.
+
+---
+
+### **1. System Blueprint & File Structure**
+
+The new feature will be housed within `petsage/features/smoke_test/` and includes all necessary components for a robust and scalable micro-service architecture.
+
+```plaintext
+petsage/
+├── __init__.py
+├── main.py
+└── features/
+    ├── __init__.py
+    └── smoke_test/
+        ├── __init__.py
+        ├── models.py         # Pydantic models for data validation
+        ├── router.py         # FastAPI endpoint definitions
+        ├── service.py        # Business logic for the feature
+        └── tests/
+            ├── __init__.py
+            └── test_router.py  # Unit and integration tests
+```
+
+---
+
+### **2. Pydantic Models**
+
+The models ensure type-safe and validated data structures for API responses.
+
+**File:** `petsage/features/smoke_test/models.py`
+```python
+# petsage/features/smoke_test/models.py
+
+from pydantic import BaseModel, Field
+from datetime import datetime
+
+class SmokeTestResponse(BaseModel):
+    """
+    Defines the response structure for a successful system health check.
+    """
+    status: str = Field(
+        ..., 
+        example="ok", 
+        description="The operational status of the service."
+    )
+    message: str = Field(
+        ..., 
+        example="PetSage system is alive!", 
+        description="A descriptive message indicating the system status."
+    )
+    timestamp: datetime = Field(
+        ..., 
+        description="The UTC timestamp when the health check was performed."
+    )
+
+    class Config:
+        # Pydantic V2 config, for older versions use `orm_mode = True`
+        from_attributes = True
+```
+
+---
+
+### **3. Service Layer**
+
+The service layer encapsulates the core business logic, keeping it separate from the routing layer.
+
+**File:** `petsage/features/smoke_test/service.py`
+```python
+# petsage/features/smoke_test/service.py
+
+from datetime import datetime, timezone
+
+def perform_smoke_test() -> dict:
+    """
+    Performs the system smoke test by generating a success status payload.
+
+    In a real-world scenario, this function could be expanded to check
+    database connections, cache availability, or other critical dependencies.
+
+    Returns:
+        A dictionary containing the status, message, and current UTC timestamp.
+    """
+    return {
+        "status": "ok",
+        "message": "PetSage system is alive!",
+        "timestamp": datetime.now(timezone.utc)
+    }
+```
+
+---
+
+### **4. API Router**
+
+The router defines the API endpoint, handles incoming requests, and orchestrates the response using the service layer and Pydantic models.
+
+**File:** `petsage/features/smoke_test/router.py`
+```python
+# petsage/features/smoke_test/router.py
+
+from fastapi import APIRouter, status
+from . import models, service
+
+# Create a router instance with a descriptive tag for OpenAPI documentation
+router = APIRouter(
+    prefix="/health",
+    tags=["System Health"]
+)
+
+@router.get(
+    path="/",
+    response_model=models.SmokeTestResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Perform a System Health Check",
+    description="""
+    Verifies that the PetSage API is operational and responsive. 
+    This endpoint can be used by monitoring services to ensure system uptime.
+    It does not require authentication.
+    """
+)
+def get_health_status():
+    """
+    Endpoint to verify that the service is running.
+
+    It retrieves the health status from the service layer and returns it
+    as a JSON response, validated against the SmokeTestResponse model.
+    """
+    response_data = service.perform_smoke_test()
+    return response_data
+```
+
+---
+
+### **5. Integration into Orchestration Pipeline**
+
+To activate the new endpoint, its router must be included in the main FastAPI application instance.
+
+**File:** `petsage/main.py`
+```python
+# petsage/main.py
+
+from fastapi import FastAPI
+from petsage.features.smoke_test.router import router as smoke_test_router
+# Import other feature routers as they are built, e.g.:
+# from petsage.features.pet_profiles.router import router as pet_profiles_router
+
+# --- PetSage Branding ---
+# The API title and description reflect our brand identity: wise, caring, and reliable.
+app = FastAPI(
+    title="PetSage API",
+    description="The official backend API for the PetSage platform. Your wise companion for pet care.",
+    version="1.0.0",
+    # Additional OpenAPI metadata
+    contact={
+        "name": "PetSage Support",
+        "url": "https://petsage.example.com/support",
+        "email": "support@petsage.example.com",
+    },
+)
+
+# --- Router Integration ---
+# Include the router for the smoke test/health check feature.
+# This makes the /health/ endpoint available.
+app.include_router(smoke_test_router)
+
+# Include other feature routers here as the system grows.
+# app.include_router(pet_profiles_router, prefix="/api/v1")
+
+@app.get("/", include_in_schema=False)
+async def root_redirect():
+    # Redirect the root path to the API documentation for developer convenience.
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/docs")
+```
+
+---
+
+### **6. Automated Tests**
+
+Unit tests are critical for ensuring feature reliability and preventing regressions. These tests verify the endpoint's correctness.
+
+**File:** `petsage/features/smoke_test/tests/test_router.py`
+```python
+# petsage/features/smoke_test/tests/test_router.py
+
+from fastapi.testclient import TestClient
+from fastapi import status
+from petsage.main import app
+from datetime import datetime
+
+# Initialize the test client with our main FastAPI app
+client = TestClient(app)
+
+def test_get_health_status_success():
+    """
+    Tests the /health/ endpoint for a successful 200 OK response
+    and validates the structure and content of the response body.
+    """
+    # 1. Arrange: No arrangement needed for a simple GET request.
+
+    # 2. Act: Make the API call to the endpoint.
+    response = client.get("/health/")
+
+    # 3. Assert: Verify the outcome.
+    assert response.status_code == status.HTTP_200_OK
+
+    # Assert the response body content
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["message"] == "PetSage system is alive!"
+    assert "timestamp" in data
+
+    # Optional: More detailed assertion on the timestamp format
+    try:
+        # Ensure the timestamp is a valid ISO 8601 format string
+        parsed_time = datetime.fromisoformat(data["timestamp"])
+        # Ensure it is timezone-aware (as set in the service)
+        assert parsed_time.tzinfo is not None
+    except (ValueError, TypeError):
+        assert False, "Timestamp is not a valid ISO 8601 format string."
+
+```
+**To run tests:**
+```bash
+# Ensure you have pytest and httpx installed
+pip install pytest httpx
+
+# Run tests from the project root directory
+pytest
+```
+
+---
+
+### **7. Branding & Safety Compliance**
+
+*   **Branding:** The API documentation, response messages (`PetSage system is alive!`), and code comments align with the PetSage brand identity—helpful, reliable, and professional.
+*   **Safety:** This health check endpoint is designed safely. It exposes no sensitive information, internal configurations, version numbers, or error stack traces. It simply confirms operational status, adhering to security best practices.
+
+`STATUS: BUILD COMPLETE`
+`MESSAGE: The 'smoke_test' feature module has been successfully generated. All files are ready for review and deployment.`
