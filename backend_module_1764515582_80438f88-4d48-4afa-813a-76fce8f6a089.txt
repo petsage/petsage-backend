@@ -1,0 +1,235 @@
+`STATUS: PROCESSING`
+`AGENT: PetSage Backend Feature Builder Agent`
+`ACTION: INITIATED`
+
+Acknowledged. Decoding feature request from payload...
+Decoded Data: `{"feature":"smoke_test","description":"Check system is alive","requirements":"none"}`
+
+Request analysis complete. The task is to create a system health check endpoint, commonly known as a "smoke test". This will serve as a basic confirmation that the PetSage API is operational.
+
+Following the PetSage System Blueprint, I will now construct the necessary components: file structure, Pydantic models, FastAPI endpoint, orchestration integration, unit tests, and documentation.
+
+`ACTION: GENERATING ARTIFACTS`
+
+---
+
+### 1. File Structure
+
+Here is the file structure for the new `health_check` feature. New or modified files are marked.
+
+```plaintext
+petsage_backend/
+└── app/
+    ├── api/
+    │   └── v1/
+    │       ├── api.py                      # MODIFIED
+    │       └── endpoints/
+    │           └── health_check.py         # NEW
+    ├── models/
+    │   └── health_check.py                 # NEW
+└── tests/
+    └── api/
+        └── v1/
+            └── test_health_check.py        # NEW
+```
+
+---
+
+### 2. Pydantic Model
+
+A response model ensures consistent and well-documented API responses.
+
+**File:** `app/models/health_check.py`
+```python
+# app/models/health_check.py
+
+"""
+Pydantic models for the Health Check feature.
+"""
+
+from pydantic import BaseModel, Field
+
+class HealthCheck(BaseModel):
+    """
+    Response model for the system health check.
+    Confirms that the PetSage service is up and running.
+    """
+    status: str = Field(
+        ...,
+        example="ok",
+        description="The operational status of the service."
+    )
+    message: str = Field(
+        ...,
+        example="PetSage System is operational",
+        description="A descriptive message about the system status."
+    )
+
+```
+
+---
+
+### 3. API Endpoint Implementation
+
+This module contains the FastAPI router and the logic for the health check endpoint.
+
+**File:** `app/api/v1/endpoints/health_check.py`
+```python
+# app/api/v1/endpoints/health_check.py
+
+"""
+API endpoint for system health checks (smoke tests).
+"""
+
+from fastapi import APIRouter
+from app.models.health_check import HealthCheck
+
+router = APIRouter()
+
+@router.get(
+    "/healthcheck",
+    response_model=HealthCheck,
+    tags=["System"],
+    summary="Perform a System Health Check",
+    description=(
+        "This endpoint serves as a simple health check to verify that the PetSage API "
+        "is running and responsive. It's a foundational check for monitoring and "
+        "deployment pipelines. It does not require authentication."
+    )
+)
+def perform_health_check():
+    """
+    Returns a standard success response confirming the system is operational.
+    
+    This is the core logic for the smoke test, providing a consistent '200 OK'
+    response when the application is alive.
+    """
+    # Adhering to PetSage branding in the response message.
+    return HealthCheck(status="ok", message="PetSage System is operational")
+
+```
+
+---
+
+### 4. Orchestration Integration
+
+The new endpoint router must be included in the main `v1` API router to make it accessible.
+
+**File:** `app/api/v1/api.py`
+```python
+# app/api/v1/api.py
+
+"""
+Main router for API version 1.
+This file orchestrates all the individual endpoint routers for the v1 API.
+"""
+
+from fastapi import APIRouter
+
+# Import endpoint routers
+from app.api.v1.endpoints import health_check
+# from app.api.v1.endpoints import users, pets, appointments # Example other routers
+
+# This is the primary router for the /api/v1 path
+api_router = APIRouter()
+
+# --- Include New Health Check Router ---
+# This makes the /healthcheck endpoint available under /api/v1/healthcheck
+api_router.include_router(health_check.router)
+
+# --- Include Other Feature Routers ---
+# Example of how other feature routers would be included:
+# api_router.include_router(users.router, prefix="/users", tags=["Users"])
+# api_router.include_router(pets.router, prefix="/pets", tags=["Pets"])
+# api_router.include_router(appointments.router, prefix="/appointments", tags=["Appointments"])
+
+```
+
+---
+
+### 5. Unit Tests
+
+Testing is crucial for ensuring feature reliability and preventing regressions.
+
+**File:** `tests/api/v1/test_health_check.py`
+```python
+# tests/api/v1/test_health_check.py
+
+"""
+Unit tests for the Health Check API endpoint.
+"""
+
+from fastapi.testclient import TestClient
+from app.main import app  # Assumes your FastAPI app instance is in app/main.py
+
+client = TestClient(app)
+
+def test_health_check_endpoint():
+    """
+    Tests the GET /api/v1/healthcheck endpoint for a successful response.
+    
+    - Verifies the HTTP status code is 200 (OK).
+    - Verifies the response body matches the expected structure and content.
+    """
+    # Arrange: The TestClient is already set up.
+    
+    # Act: Make a GET request to the health check endpoint.
+    response = client.get("/api/v1/healthcheck")
+    
+    # Assert: Check the response.
+    assert response.status_code == 200
+    
+    response_data = response.json()
+    assert response_data["status"] == "ok"
+    assert response_data["message"] == "PetSage System is operational"
+
+```
+
+---
+
+### 6. Documentation
+
+Clear documentation is essential for developers using the API. Here is an entry for your API documentation or `README.md`.
+
+**File:** `README.md` (Feature Addition)
+```markdown
+## API Endpoints
+
+### System
+
+#### `GET /api/v1/healthcheck`
+
+Performs a simple health check to verify that the PetSage API is running and responsive. This endpoint is public and can be used by monitoring services to check application liveness.
+
+**Summary:** Perform a System Health Check
+
+**Request:**
+
+*   **Method:** `GET`
+*   **URL:** `/api/v1/healthcheck`
+*   **Headers:** None
+*   **Body:** None
+
+**Success Response (200 OK):**
+
+*   **Content-Type:** `application/json`
+*   **Body:**
+
+    ```json
+    {
+      "status": "ok",
+      "message": "PetSage System is operational"
+    }
+    ```
+
+**Error Responses:**
+
+*   This endpoint is designed to not return errors under normal operation. If the service is down, it will not respond or will return a standard server error (e.g., `503 Service Unavailable`).
+```
+
+---
+
+`ACTION: COMPLETED`
+`STATUS: SUCCESS`
+
+All artifacts for the `smoke_test` (health check) feature have been generated according to the PetSage System Blueprint and best practices. The code is ready for peer review and integration into the main branch.
