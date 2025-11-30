@@ -1,0 +1,264 @@
+Greetings. I am the PetSage Backend Feature Builder Agent.
+
+I have processed your request for a `smoke_test` feature. The objective is to ensure the builder's functionality and establish a foundational health check for the PetSage API.
+
+In accordance with the PetSage System Blueprint, I have generated a complete, production-ready, and testable FastAPI module. This includes the necessary file structure, Pydantic models, router integration, and unit tests.
+
+Below is the full implementation.
+
+***
+
+### **1. Project File Structure**
+
+Here is the directory structure for the new `smoke_test` feature. This establishes the standard PetSage backend layout.
+
+```
+petsage_backend/
+├── app/
+│   ├── __init__.py
+│   ├── api/
+│   │   ├── __init__.py
+│   │   └── v1/
+│   │       ├── __init__.py
+│   │       ├── api.py
+│   │       └── endpoints/
+│   │           ├── __init__.py
+│   │           └── smoke_test.py
+│   ├── core/
+│   │   ├── __init__.py
+│   │   └── config.py
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── smoke.py
+│   └── main.py
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py
+│   └── api/
+│       └── v1/
+│           ├── __init__.py
+│           └── test_smoke_test.py
+└── pyproject.toml
+```
+
+### **2. Project Dependencies**
+
+This file defines the project's dependencies. It should be placed at the root of the project.
+
+**File:** `pyproject.toml`
+```toml
+[tool.poetry]
+name = "petsage-backend"
+version = "0.1.0"
+description = "Backend services for the PetSage application."
+authors = ["PetSage Builder Agent <builder@petsage.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "^0.104.1"
+uvicorn = {extras = ["standard"], version = "^0.24.0"}
+pydantic = "^2.5.2"
+pydantic-settings = "^2.1.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.3"
+httpx = "^0.25.1" # Required for TestClient
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+```
+
+### **3. Core Application Logic**
+
+These files form the core of the FastAPI application.
+
+**File:** `app/core/config.py`
+```python
+"""
+PetSage Application Configuration.
+
+Loads settings from environment variables for secure and flexible deployment.
+"""
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """
+    Defines application-wide settings.
+    """
+    PROJECT_NAME: str = "PetSage API"
+    API_V1_STR: str = "/api/v1"
+    
+    # model_config allows loading from a .env file (not checked into git)
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
+
+
+settings = Settings()
+```
+
+**File:** `app/models/smoke.py`
+```python
+"""
+Pydantic models for the Smoke Test / Health Check feature.
+"""
+from pydantic import BaseModel, Field
+
+
+class SmokeResponse(BaseModel):
+    """
+    Response model for a successful health check.
+    """
+    status: str = Field(..., description="The operational status of the service.", example="ok")
+    message: str = Field(..., description="A confirmation message.", example="PetSage API is operational.")
+
+```
+
+### **4. API Endpoint Definition**
+
+This section defines the API router, the specific endpoint, and integrates it into the main application.
+
+**File:** `app/api/v1/endpoints/smoke_test.py`
+```python
+"""
+API endpoint for the smoke test (health check).
+
+Provides a simple endpoint to verify that the API is running and responsive.
+"""
+from fastapi import APIRouter
+
+from app.models.smoke import SmokeResponse
+
+router = APIRouter()
+
+
+@router.get(
+    "/health/check",
+    response_model=SmokeResponse,
+    tags=["Health"],
+    summary="Perform a Health Check",
+    description="Responds with a success message if the API is operational.",
+    status_code=200,
+)
+def health_check() -> SmokeResponse:
+    """
+    Endpoint to confirm the API is functional.
+    """
+    return SmokeResponse(status="ok", message="PetSage API is operational.")
+```
+
+**File:** `app/api/v1/api.py`
+```python
+"""
+Main router for API version 1.
+
+Aggregates all the individual feature routers for this version.
+"""
+from fastapi import APIRouter
+
+from app.api.v1.endpoints import smoke_test
+
+api_router = APIRouter()
+
+# Include feature-specific routers
+api_router.include_router(smoke_test.router, prefix="/system", tags=["System"])
+```
+
+**File:** `app/main.py`
+```python
+"""
+Main application entry point for the PetSage FastAPI service.
+"""
+from fastapi import FastAPI
+
+from app.api.v1.api import api_router
+from app.core.config import settings
+
+# Initialize the FastAPI app instance
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+)
+
+# Mount the version 1 API router
+app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# A root endpoint for basic connectivity check
+@app.get("/", include_in_schema=False)
+def read_root():
+    return {"welcome": "This is the root of the PetSage API."}
+```
+
+### **5. Testing**
+
+Robust tests are crucial for reliability. This feature includes a full unit test.
+
+**File:** `tests/conftest.py`
+```python
+"""
+Pytest fixtures for testing the PetSage API.
+"""
+from typing import Generator
+
+import pytest
+from fastapi.testclient import TestClient
+
+from app.main import app
+
+
+@pytest.fixture(scope="module")
+def client() -> Generator:
+    """
+    Provides a TestClient instance for making requests to the application.
+    """
+    with TestClient(app) as c:
+        yield c
+```
+
+**File:** `tests/api/v1/test_smoke_test.py`
+```python
+"""
+Tests for the smoke_test (health check) endpoint.
+"""
+from fastapi.testclient import TestClient
+from starlette import status
+
+
+def test_health_check_success(client: TestClient) -> None:
+    """
+    Tests the GET /api/v1/system/health/check endpoint for a successful response.
+    """
+    # Act
+    response = client.get("/api/v1/system/health/check")
+
+    # Assert
+    assert response.status_code == status.HTTP_200_OK
+    
+    content = response.json()
+    assert content["status"] == "ok"
+    assert content["message"] == "PetSage API is operational."
+```
+
+### **6. How to Run**
+
+1.  **Install dependencies:**
+    ```bash
+    pip install "poetry==1.7.1"
+    poetry install
+    ```
+2.  **Run the development server:**
+    ```bash
+    poetry run uvicorn app.main:app --reload
+    ```
+3.  **Access the API docs:**
+    Navigate to `http://127.0.0.1:8000/docs` in your browser.
+4.  **Run the tests:**
+    ```bash
+    poetry run pytest
+    ```
+
+***
+
+This module has been successfully built and is ready for integration. The established blueprint will guide all future feature development, ensuring consistency and quality.
+
+Proceed with the next instruction.
