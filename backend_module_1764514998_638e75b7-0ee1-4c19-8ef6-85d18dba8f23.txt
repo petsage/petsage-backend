@@ -1,0 +1,258 @@
+Greetings. I am the PetSage Backend Feature Builder Agent.
+
+My purpose is to construct robust, well-documented, and fully-tested FastAPI modules according to the PetSage System Blueprint.
+
+I have processed the request from the provided payload:
+
+*   **Feature:** `smoke_test`
+*   **Description:** "Ensure builder functional"
+*   **Requirements:** "none"
+
+This constitutes a request for a foundational health check endpoint. I will now generate the complete backend module for this feature.
+
+### **Feature Build Summary: Smoke Test**
+
+This module provides a simple `GET /api/v1/smoke-test` endpoint. Its function is to confirm that the API is alive and responsive. It requires no input and returns a JSON object confirming the operational status and the current server timestamp.
+
+---
+
+### **1. Generated File Structure**
+
+Here is the complete directory and file structure for the new `smoke_test` feature module:
+
+```
+/petsage_backends/
+└── features/
+    └── smoke_test/
+        ├── __init__.py
+        ├── main.py
+        ├── models.py
+        ├── README.md
+        └── tests/
+            ├── __init__.py
+            └── test_smoke_test.py
+```
+
+---
+
+### **2. Generated Source Code**
+
+Below is the full source code for each file.
+
+#### **File: `petsage_backends/features/smoke_test/models.py`**
+
+This file defines the Pydantic data models for the feature's API responses, ensuring data validation and clear API schema documentation.
+
+```python
+# petsage_backends/features/smoke_test/models.py
+
+from pydantic import BaseModel, Field
+from datetime import datetime
+
+class SmokeTestResponse(BaseModel):
+    """
+    Defines the response structure for the smoke test endpoint.
+    """
+    status: str = Field(
+        ...,
+        example="ok",
+        description="The operational status of the service."
+    )
+    message: str = Field(
+        ...,
+        example="PetSage Smoke Test: Service is operational.",
+        description="A descriptive message indicating the service status."
+    )
+    timestamp: datetime = Field(
+        ...,
+        description="The ISO 8601 timestamp (UTC) when the check was performed."
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "status": "ok",
+                "message": "PetSage Smoke Test: Service is operational.",
+                "timestamp": "2023-10-27T10:00:00.123456Z"
+            }
+        }
+```
+
+#### **File: `petsage_backends/features/smoke_test/main.py`**
+
+This file contains the FastAPI router and the core logic for the smoke test endpoint.
+
+```python
+# petsage_backends/features/smoke_test/main.py
+
+from fastapi import APIRouter
+from datetime import datetime, timezone
+from .models import SmokeTestResponse
+
+router = APIRouter()
+
+@router.get(
+    "/smoke-test",
+    response_model=SmokeTestResponse,
+    summary="Perform a simple smoke test",
+    description="This endpoint confirms that the PetSage API service is running and can process a basic request.",
+)
+async def perform_smoke_test():
+    """
+    Confirms basic API functionality.
+
+    Returns a success message with the current server time in UTC, indicating the
+    service is operational. This is a fundamental health check.
+    """
+    return SmokeTestResponse(
+        status="ok",
+        message="PetSage Smoke Test: Service is operational.",
+        timestamp=datetime.now(timezone.utc)
+    )
+```
+
+#### **File: `petsage_backends/features/smoke_test/tests/test_smoke_test.py`**
+
+This file provides unit tests for the smoke test endpoint, ensuring its reliability and correctness.
+
+```python
+# petsage_backends/features/smoke_test/tests/test_smoke_test.py
+
+import pytest
+from fastapi.testclient import TestClient
+from datetime import datetime
+
+# It is assumed that the main FastAPI app instance is defined in
+# 'petsage_backends.main.app' and is configured with the smoke_test router.
+from petsage_backends.main import app
+
+client = TestClient(app)
+
+def test_smoke_test_endpoint_success():
+    """
+    Tests the GET /api/v1/smoke-test endpoint for a successful response.
+    """
+    # Arrange & Act
+    response = client.get("/api/v1/smoke-test")
+    data = response.json()
+
+    # Assert
+    assert response.status_code == 200
+    assert data["status"] == "ok"
+    assert data["message"] == "PetSage Smoke Test: Service is operational."
+    assert "timestamp" in data
+
+def test_smoke_test_timestamp_is_valid_isoformat():
+    """
+    Tests that the timestamp returned by the smoke test is a valid ISO 8601 format.
+    """
+    # Arrange & Act
+    response = client.get("/api/v1/smoke-test")
+    data = response.json()
+
+    # Assert
+    try:
+        # FastAPI/Pydantic automatically formats datetime to a string.
+        # We need to parse it back to confirm its validity.
+        # The 'Z' suffix is standard for UTC, but some parsers prefer '+00:00'.
+        timestamp_str = data["timestamp"]
+        datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        pytest.fail(f"Timestamp '{data.get('timestamp')}' is not a valid ISO 8601 format string.")
+
+```
+
+#### **File: `petsage_backends/features/smoke_test/__init__.py`**
+#### **File: `petsage_backends/features/smoke_test/tests/__init__.py`**
+
+These files are intentionally left blank. They serve to mark their respective directories as Python packages.
+
+---
+
+### **3. Orchestration Pipeline Integration**
+
+To activate this new feature, you must integrate its router into the main FastAPI application instance.
+
+**Action Required:** Modify your main application file (`petsage_backends/main.py`) to include the following:
+
+```python
+# In petsage_backends/main.py
+
+from fastapi import FastAPI
+from .features.smoke_test.main import router as smoke_test_router
+
+# --- PetSage System Blueprint: Core App Initialization ---
+app = FastAPI(
+    title="PetSage API",
+    description="The official backend API for the PetSage platform, providing services for pet care, advice, and community interaction.",
+    version="1.0.0",
+    # Additional OpenAPI metadata
+    contact={
+        "name": "PetSage Support",
+        "url": "https://petsage.io/support",
+        "email": "support@petsage.io",
+    },
+)
+
+# --- PetSage System Blueprint: Feature Router Integration ---
+#
+# Include the router for the Smoke Test feature.
+# All routes in this router will be prefixed with /api/v1.
+# It will be grouped under the "Health & Monitoring" tag in the API docs.
+app.include_router(
+    smoke_test_router,
+    prefix="/api/v1",
+    tags=["Health & Monitoring"]
+)
+
+# ... include other feature routers here as they are built ...
+```
+
+---
+
+### **4. Documentation**
+
+This file provides developer-facing documentation for the module.
+
+#### **File: `petsage_backends/features/smoke_test/README.md`**
+
+```markdown
+# Smoke Test Feature
+
+## Description
+
+This module provides a basic health check endpoint for the PetSage backend service. Its purpose is to offer a simple, unauthenticated way to verify that the application is running, responsive, and has been deployed correctly. This is often referred to as a "smoke test" and is critical for automated monitoring, deployment pipelines, and container orchestration health checks.
+
+## API Endpoint
+
+### `GET /api/v1/smoke-test`
+
+- **Summary**: Perform a simple smoke test.
+- **Description**: Confirms that the PetSage API service is running and can process a basic request. It's a fundamental health check.
+- **Success Response (`200 OK`)**:
+  ```json
+  {
+    "status": "ok",
+    "message": "PetSage Smoke Test: Service is operational.",
+    "timestamp": "2023-10-27T10:00:00.123456Z"
+  }
+  ```
+- **Response Model**:
+  - `status` (string): The operational status of the service. Always "ok" on success.
+  - `message` (string): A descriptive, branded message.
+  - `timestamp` (string): The ISO 8601 timestamp (UTC) when the check was performed.
+
+## Running Tests
+
+To run the automated tests for this specific module, navigate to the root directory of the `petsage_backends` project and execute the following command:
+
+```bash
+pytest petsage_backends/features/smoke_test/
+```
+
+This will discover and run all tests within the `tests` subdirectory of this feature.
+```
+
+---
+
+Build complete. The `smoke_test` feature module has been generated in full compliance with the PetSage System Blueprint, branding guidelines, and safety protocols. The module is now ready for integration and deployment.
