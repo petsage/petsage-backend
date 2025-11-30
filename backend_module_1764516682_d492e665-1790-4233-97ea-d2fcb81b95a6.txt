@@ -1,0 +1,238 @@
+`STATUS: PROCESSING COMPLETE`
+`FEATURE: smoke_test`
+`AGENT: PetSage Backend Feature Builder`
+
+### ORCHESTRATION LOG
+1.  **Payload Received:** Incoming request for `smoke_test` feature acknowledged.
+2.  **Data Decoded:** Base64 payload decoded to `{"feature":"smoke_test","description":"Check system is alive","requirements":"none"}`.
+3.  **Blueprint Analysis:** Request analyzed against PetSage System Blueprint. A simple system health check endpoint is required.
+4.  **Directory Scaffolding:** Virtual file structure planned for a new, self-contained feature module: `src/features/smoke_test/`.
+5.  **Model Generation:** Pydantic `SmokeTestResponse` model designed for a structured, predictable, and documented API response.
+6.  **Service Layer Creation:** Business logic for the smoke test encapsulated in `service.py`. Logic is minimal but separated for architectural consistency.
+7.  **API Router Generation:** FastAPI `APIRouter` created in `main.py` with a `GET /system/health` endpoint. OpenAPI metadata (tags, summary, description) added for automatic documentation. PetSage branding ("...alive and purring!") incorporated.
+8.  **Test Suite Production:** `pytest` unit tests generated using FastAPI's `TestClient`. The test suite covers the successful response (`200 OK`) and confirms the response body structure and content.
+9.  **Integration Plan:** Instructions for including the new `smoke_test_router` into the main `FastAPI` application instance formulated.
+10. **Documentation & Compliance:** Final documentation, integration instructions, and compliance report prepared.
+11. **Transmission:** Assembled artifacts prepared for delivery.
+
+---
+
+### GENERATED ARTIFACTS
+
+Here are the complete backend modules, models, and tests for the `smoke_test` feature.
+
+#### 1. File Structure
+
+A new directory will be created within your `src/features/` directory as follows:
+
+```
+src/
+└── features/
+    └── smoke_test/
+        ├── __init__.py           # Empty file to make it a Python package
+        ├── main.py               # The main API router and endpoint
+        ├── models.py             # Pydantic models for request/response
+        ├── service.py            # The business logic
+        └── tests/
+            ├── __init__.py       # Empty file
+            └── test_smoke_test.py  # Unit tests for the feature
+```
+
+#### 2. Pydantic Models
+**File:** `src/features/smoke_test/models.py`
+
+```python
+# src/features/smoke_test/models.py
+from pydantic import BaseModel, Field
+
+class SmokeTestResponse(BaseModel):
+    """
+    Defines the response structure for the system health check.
+    """
+    status: str = Field(
+        ..., 
+        example="ok", 
+        description="The operational status of the service."
+    )
+    message: str = Field(
+        ..., 
+        example="PetSage System is alive and purring!", 
+        description="A confirmation message adhering to PetSage branding."
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "status": "ok",
+                "message": "PetSage System is alive and purring!"
+            }
+        }
+```
+
+#### 3. Service Logic
+**File:** `src/features/smoke_test/service.py`
+
+```python
+# src/features/smoke_test/service.py
+from .models import SmokeTestResponse
+
+def perform_smoke_test() -> SmokeTestResponse:
+    """
+    Performs the system smoke test by constructing a success response.
+
+    This function encapsulates the core "business logic" for the health check,
+    which in this case is simply to confirm the system is running.
+
+    Returns:
+        SmokeTestResponse: An object indicating the system is alive.
+    """
+    return SmokeTestResponse(
+        status="ok",
+        message="PetSage System is alive and purring!"
+    )
+```
+
+#### 4. API Router
+**File:** `src/features/smoke_test/main.py`
+
+```python
+# src/features/smoke_test/main.py
+from fastapi import APIRouter, status
+from . import service
+from .models import SmokeTestResponse
+
+# Create a new router for this feature, which will be included in the main app
+router = APIRouter(
+    prefix="/system",
+    tags=["System Health"],
+    responses={404: {"description": "Not found"}},
+)
+
+@router.get(
+    "/health",
+    response_model=SmokeTestResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Perform a System Smoke Test",
+    description="This endpoint can be used to verify that the PetSage backend service is running and responsive. It's a simple, unauthenticated check.",
+)
+async def get_system_health():
+    """
+    Checks if the system is alive.
+
+    A simple health check endpoint that returns a success message
+    if the service is operational. It's the PetSage equivalent of a
+    happy cat's purr.
+    """
+    return service.perform_smoke_test()
+```
+
+#### 5. Unit Tests
+**File:** `src/features/smoke_test/tests/test_smoke_test.py`
+
+```python
+# src/features/smoke_test/tests/test_smoke_test.py
+import pytest
+from fastapi.testclient import TestClient
+from src.main import app # Assumes your main FastAPI app instance is in src/main.py
+
+client = TestClient(app)
+
+def test_smoke_test_endpoint_success():
+    """
+    Tests the GET /system/health endpoint for a successful 200 OK response
+    and correct response body.
+    """
+    # Act: Make the request to the health check endpoint
+    response = client.get("/system/health")
+
+    # Assert: Check the status code and response content
+    assert response.status_code == 200
+    
+    response_data = response.json()
+    assert response_data["status"] == "ok"
+    assert response_data["message"] == "PetSage System is alive and purring!"
+
+def test_smoke_test_nonexistent_route():
+    """
+    Tests a related but non-existent route to ensure proper 404 handling.
+    """
+    # Act: Make a request to a route that shouldn't exist
+    response = client.get("/system/health/invalid-subpath")
+
+    # Assert: Check for a 404 Not Found status code
+    assert response.status_code == 404
+
+```
+
+---
+
+### INTEGRATION INSTRUCTIONS
+
+To activate this new feature, you must integrate its router into your main FastAPI application.
+
+1.  **Locate your main application file** (e.g., `src/main.py`).
+2.  **Import the new router** at the top of the file.
+3.  **Include the router** using `app.include_router()`.
+
+**Example modification for `src/main.py`:**
+
+```python
+# src/main.py
+from fastapi import FastAPI
+# ... other imports
+
+# --- Import the new feature router ---
+from src.features.smoke_test.main import router as smoke_test_router
+
+
+# PetSage System Blueprint Initialization
+app = FastAPI(
+    title="PetSage API",
+    description="Your wise companion for all things pets.",
+    version="1.0.0",
+)
+
+# --- Feature Router Integration ---
+# The orchestration pipeline adds feature routers here.
+# Add the new smoke_test_router
+app.include_router(smoke_test_router)
+
+# ... include other feature routers here
+
+
+# --- Optional: Add a root endpoint for basic discovery ---
+@app.get("/", tags=["Root"])
+async def read_root():
+    return {"message": "Welcome to the PetSage API. Visit /docs for documentation."}
+
+```
+
+---
+
+### DOCUMENTATION
+
+#### Feature: Smoke Test
+-   **Description:** A simple health check endpoint to confirm that the backend service is operational and responsive.
+-   **Endpoint:** `GET /system/health`
+-   **Authentication:** Not required.
+-   **Request Body:** None.
+-   **Successful Response (`200 OK`):**
+    ```json
+    {
+      "status": "ok",
+      "message": "PetSage System is alive and purring!"
+    }
+    ```
+
+#### Testing Guide
+To run the tests for this specific module, execute `pytest` from your project's root directory:
+```bash
+pytest src/features/smoke_test/tests/
+```
+
+---
+
+### COMPLIANCE REPORT
+-   **PetSage System Blueprint:** **PASS**. The feature is built as a self-contained module (`/features/smoke_test`), separating concerns (models, service, router), and includes a dedicated test suite.
+-   **Branding:** **PASS**. The response message `PetSage System is alive and purring!` is consistent with the PetSage brand identity.
+-   **Safety Rules:** **PASS**. The endpoint is read-only (`GET`), requires no user input, processes no sensitive data, and has no side effects. It is safe for public exposure (e.g., for use by load balancers or uptime monitors).
