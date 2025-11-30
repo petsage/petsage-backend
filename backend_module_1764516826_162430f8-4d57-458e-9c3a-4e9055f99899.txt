@@ -1,0 +1,479 @@
+Acknowledged. PetSage Backend Feature Builder Agent processing the request.
+
+Payload decoded successfully.
+- **Feature**: `smoke_test`
+- **Description**: `Check system is alive`
+- **Requirements**: `none`
+
+Initiating feature build protocol. Generating a new health check module according to the PetSage System Blueprint. This will serve as a foundational smoke test to verify system liveness.
+
+---
+
+### **Feature Build: `smoke_test`**
+
+Here is the complete backend module for the requested feature.
+
+#### **1. System Architecture & File Structure**
+
+The module is organized following the standard PetSage backend service blueprint for scalability, testability, and clarity.
+
+```
+petsage_backend/
+├── app/
+│   ├── __init__.py
+│   ├── api/
+│   │   ├── __init__.py
+│   │   └── v1/
+│   │       ├── __init__.py
+│   │       ├── endpoints/
+│   │       │   ├── __init__.py
+│   │       │   └── system.py      # <-- FEATURE ENDPOINT LOGIC
+│   │       └── schemas/
+│   │           ├── __init__.py
+│   │           └── system.py      # <-- FEATURE PYDANTIC MODELS
+│   ├── core/
+│   │   ├── __init__.py
+│   │   └── config.py              # <-- Centralized Configuration
+│   └── main.py                    # <-- Main FastAPI Application
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py
+│   └── api/
+│       └── v1/
+│           ├── __init__.py
+│           └── test_system.py     # <-- FEATURE TESTS
+├── .env.example                   # <-- Example Environment Variables
+├── .gitignore
+├── Dockerfile                     # <-- Containerization
+├── README.md                      # <-- Documentation
+└── requirements.txt               # <-- Dependencies
+```
+
+---
+
+#### **2. Pydantic Models**
+
+These models define the data structure for our API responses, ensuring type safety and clear contracts.
+
+**File: `app/api/v1/schemas/system.py`**
+```python
+"""
+Pydantic Schemas for System-level responses.
+
+This module defines the data structures for health checks and status reports,
+ensuring consistent and validated API responses for system endpoints.
+"""
+from pydantic import BaseModel, Field
+
+
+class SystemStatus(BaseModel):
+    """
+    Represents the health status of the PetSage system.
+    """
+    status: str = Field(..., description="The operational status of the service.", example="ok")
+    name: str = Field(..., description="The name of the service.", example="PetSage Backend")
+    version: str = Field(..., description="The current version of the service.", example="1.0.0")
+
+    class Config:
+        orm_mode = True
+        schema_extra = {
+            "example": {
+                "status": "ok",
+                "name": "PetSage Backend",
+                "version": "1.0.0"
+            }
+        }
+```
+
+---
+
+#### **3. API Endpoint**
+
+This is the core logic for the feature, defining the API route and its behavior.
+
+**File: `app/api/v1/endpoints/system.py`**
+```python
+"""
+API endpoints for system-level operations like health checks.
+
+This router provides a public endpoint to verify the service is running
+and responsive, adhering to the PetSage monitoring standards.
+"""
+from fastapi import APIRouter
+
+from app.api.v1.schemas.system import SystemStatus
+from app.core.config import settings
+
+router = APIRouter()
+
+
+@router.get(
+    "/health",
+    response_model=SystemStatus,
+    tags=["System"],
+    summary="Perform a System Health Check",
+    description="Checks if the PetSage API is alive and returns its current status and version.",
+    response_description="The current status and version of the PetSage API.",
+)
+def get_system_status() -> SystemStatus:
+    """
+    **Liveness Probe:**
+
+    This endpoint is the primary health check for the PetSage service.
+    It can be used by orchestration tools (like Kubernetes) or monitoring
+    systems to verify that the application is running.
+
+    - **Returns `200 OK`**: If the service is operational.
+    - **No dependencies**: This check does not query databases or external services.
+
+    It provides a simple and reliable way to confirm the API is responsive.
+    """
+    return SystemStatus(
+        status="ok",
+        name=settings.PROJECT_NAME,
+        version=settings.APP_VERSION
+    )
+```
+
+---
+
+#### **4. Orchestration & Configuration**
+
+These files wire the application together and manage configuration.
+
+**File: `app/core/config.py`**
+```python
+"""
+Centralized configuration management for the PetSage application.
+
+Utilizes Pydantic's BaseSettings to load configuration from environment
+variables, ensuring a clear and validated setup.
+"""
+from pydantic import BaseSettings
+
+
+class Settings(BaseSettings):
+    """
+    Application settings loaded from environment variables.
+    """
+    PROJECT_NAME: str = "PetSage Backend"
+    APP_VERSION: str = "1.0.0"
+    API_V1_STR: str = "/api/v1"
+
+    class Config:
+        # This tells Pydantic to read settings from a .env file
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+
+# Instantiate the settings so it can be imported and used across the app
+settings = Settings()
+```
+
+**File: `app/main.py`**
+```python
+"""
+Main entry point for the PetSage FastAPI application.
+
+This file initializes the FastAPI app, includes the necessary routers,
+and sets up middleware and exception handlers.
+"""
+from fastapi import FastAPI
+from app.api.v1.endpoints import system
+from app.core.config import settings
+
+# Initialize the FastAPI application
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    version=settings.APP_VERSION,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
+
+# Include the system router for the health check
+app.include_router(
+    system.router,
+    prefix=settings.API_V1_STR,
+    tags=["System"]
+)
+
+@app.get("/", include_in_schema=False)
+def read_root():
+    """A default endpoint for the root URL."""
+    return {"message": f"Welcome to {settings.PROJECT_NAME} v{settings.APP_VERSION}"}
+```
+
+---
+
+#### **5. Testing**
+
+Robust tests ensure the feature works as expected and prevents regressions.
+
+**File: `tests/conftest.py`**
+```python
+"""
+Pytest configuration and fixtures.
+
+This file provides shared fixtures for the test suite, such as a
+reusable FastAPI TestClient instance.
+"""
+import pytest
+from fastapi.testclient import TestClient
+from typing import Generator
+
+from app.main import app
+
+
+@pytest.fixture(scope="module")
+def client() -> Generator[TestClient, None, None]:
+    """
+    Create a new FastAPI TestClient that can be used by tests to make
+    requests to the application.
+    """
+    with TestClient(app) as c:
+        yield c
+```
+
+**File: `tests/api/v1/test_system.py`**
+```python
+"""
+Tests for the System API endpoints.
+
+This module contains tests for the health check endpoint, ensuring it
+responds correctly and adheres to the API contract.
+"""
+from fastapi.testclient import TestClient
+from starlette import status
+
+from app.core.config import settings
+
+
+def test_get_health_check(client: TestClient) -> None:
+    """
+    Test the /api/v1/health endpoint.
+
+    It should return a 200 OK status and a JSON payload with the
+    correct system status, name, and version.
+    """
+    # Arrange
+    url = f"{settings.API_V1_STR}/health"
+
+    # Act
+    response = client.get(url)
+
+    # Assert
+    assert response.status_code == status.HTTP_200_OK
+
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["name"] == settings.PROJECT_NAME
+    assert data["version"] == settings.APP_VERSION
+```
+
+---
+
+#### **6. Project & Environment Setup**
+
+These files define dependencies, environment variables, and containerization instructions.
+
+**File: `requirements.txt`**
+```
+fastapi==0.95.1
+uvicorn[standard]==0.21.1
+pydantic[dotenv]==1.10.7
+
+# Testing dependencies
+pytest==7.3.1
+httpx==0.24.0
+```
+
+**File: `.env.example`**
+```
+# Copy this file to .env and set your environment variables
+PROJECT_NAME="PetSage Backend"
+APP_VERSION="1.0.0"
+```
+
+**File: `.gitignore`**
+```
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+```
+
+**File: `Dockerfile`**
+```dockerfile
+# Use an official Python runtime as a parent image
+FROM python:3.10-slim
+
+# Set the working directory in the container
+WORKDIR /usr/src/app
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Install system dependencies
+RUN apt-get update \
+  && apt-get -y install netcat \
+  && apt-get clean
+
+# Install Python dependencies
+COPY ./requirements.txt /usr/src/app/requirements.txt
+RUN pip install --no-cache-dir --upgrade -r /usr/src/app/requirements.txt
+
+# Copy the application code into the container
+COPY ./app /usr/src/app/app
+
+# Expose the port the app runs on
+EXPOSE 8000
+
+# Command to run the application
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+---
+
+#### **7. Documentation**
+
+Clear instructions for developers and operators.
+
+**File: `README.md`**
+```markdown
+# PetSage Backend Service
+
+This repository contains the backend API for the PetSage application.
+
+## Feature: System Health Check
+
+A health check endpoint has been implemented to allow for easy monitoring and system liveness checks.
+
+- **Endpoint**: `GET /api/v1/health`
+- **Description**: Returns the operational status, name, and version of the service.
+- **Success Response (200 OK)**:
+  ```json
+  {
+    "status": "ok",
+    "name": "PetSage Backend",
+    "version": "1.0.0"
+  }
+  ```
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.10+
+- Docker (optional, for containerized deployment)
+
+### Local Development Setup
+
+1.  **Clone the repository:**
+    ```bash
+    git clone <repository-url>
+    cd petsage_backend
+    ```
+
+2.  **Create a virtual environment:**
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+    ```
+
+3.  **Install dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+4.  **Set up environment variables:**
+    ```bash
+    cp .env.example .env
+    # (Optional) Modify variables in .env if needed
+    ```
+
+5.  **Run the application:**
+    ```bash
+    uvicorn app.main:app --reload
+    ```
+    The API will be available at `http://127.0.0.1:8000`.
+    Interactive documentation can be found at `http://127.0.0.1:8000/docs`.
+
+### Running Tests
+
+To ensure code quality and correctness, run the test suite:
+
+```bash
+pytest
+```
+
+---
+```
+
+---
+
+**Build Complete.**
+
+The `smoke_test` feature has been successfully generated as a `/api/v1/health` endpoint. The module is fully documented, tested, and containerized according to the PetSage System Blueprint. It is now ready for integration into the CI/CD pipeline and deployment.
