@@ -1,0 +1,275 @@
+`STATUS: PROCESSING`
+`AGENT: PetSage Backend Feature Builder Agent`
+`ACTION: INITIALIZING`
+
+Acknowledged. Payload received and decoded.
+
+**Request:**
+*   **Feature:** `smoke_test`
+*   **Description:** Ensure builder functional
+*   **Requirements:** none
+
+`ACTION: PARSING BLUEPRINT`
+
+Adhering to PetSage System Blueprint standards for module generation.
+*   Separation of concerns (models, routers, tests).
+*   Standardized API response format.
+*   Asynchronous implementation (`async/await`).
+*   Dependency injection for configuration and services.
+*   Automated OpenAPI documentation generation.
+*   Inclusion of comprehensive unit tests.
+
+`ACTION: GENERATING FEATURE MODULE`
+
+Generating all necessary files and integration instructions for the `smoke_test` feature.
+
+---
+
+### **1. Generated File Structure**
+
+Here is the file structure for the new `smoke_test` feature. `[NEW]` indicates a new file, and `[MODIFIED]` indicates a file that requires modification to integrate the new feature.
+
+```
+petsage_app/
+└── app/
+    ├── api/
+    │   ├── v1/
+    │   │   ├── endpoints/
+    │   │   │   └── health.py          -- [NEW]
+    │   │   └── routers.py             -- [MODIFIED]
+    ├── models/
+    │   └── health.py                  -- [NEW]
+    ├── core/
+    │   └── config.py                  -- (Reference for settings)
+    └── main.py                        -- (Reference for app setup)
+└── tests/
+    └── api/
+        └── v1/
+            └── test_health.py         -- [NEW]
+```
+
+---
+
+### **2. Pydantic Models**
+
+Models define the data shape for requests and responses, ensuring type safety and clear contracts.
+
+**File:** `app/models/health.py`
+```python
+# File: app/models/health.py
+"""
+Pydantic models for Health Check related endpoints.
+"""
+from pydantic import BaseModel, Field
+
+
+class SmokeTestResponse(BaseModel):
+    """
+    Standard response model for a successful smoke test.
+    """
+    status: str = Field(
+        ...,
+        example="ok",
+        description="The operational status of the service.",
+    )
+    service_name: str = Field(
+        ...,
+        example="PetSage API",
+        description="The name of the service.",
+    )
+    service_version: str = Field(
+        ...,
+        example="1.0.0",
+        description="The current version of the running service.",
+    )
+
+    class Config:
+        """Pydantic model configuration."""
+        schema_extra = {
+            "example": {
+                "status": "ok",
+                "service_name": "PetSage API",
+                "service_version": "1.0.0"
+            }
+        }
+```
+
+---
+
+### **3. API Endpoint (Router)**
+
+This file contains the API logic for the smoke test endpoint.
+
+**File:** `app/api/v1/endpoints/health.py`
+```python
+# File: app/api/v1/endpoints/health.py
+"""
+API endpoints for health checks and service monitoring.
+Provided by the PetSage Backend Feature Builder Agent.
+"""
+from fastapi import APIRouter, status, Depends
+from app.models.health import SmokeTestResponse
+from app.core.config import get_settings, Settings
+
+# Create a new router for health-related endpoints
+router = APIRouter()
+
+@router.get(
+    "/smoke-test",
+    response_model=SmokeTestResponse,
+    status_code=status.HTTP_200_OK,
+    tags=["Health"],
+    summary="Perform a simple smoke test",
+    description="This endpoint verifies that the API is running and responsive. "
+                "It provides basic service information as a confirmation.",
+)
+async def smoke_test(
+    settings: Settings = Depends(get_settings),
+) -> SmokeTestResponse:
+    """
+    **Smoke Test Endpoint**
+
+    Confirms the API is operational by returning a static success response.
+    This is the most basic check to ensure the service is up.
+
+    - **Returns**: A `SmokeTestResponse` object with the service status, name, and version.
+    """
+    return SmokeTestResponse(
+        status="ok",
+        service_name=settings.PROJECT_NAME,
+        service_version=settings.API_VERSION,
+    )
+
+```
+*Note: This implementation assumes you have a `app/core/config.py` file with a `Settings` class and a `get_settings` dependency function to manage configuration, which is a standard pattern.*
+
+---
+
+### **4. Orchestration Pipeline Integration**
+
+To make the new endpoint accessible, its router must be included in the main API router.
+
+**File:** `app/api/v1/routers.py` `[MODIFIED]`
+```python
+# File: app/api/v1/routers.py
+"""
+Main router aggregator for API version 1.
+Includes all feature-specific routers.
+"""
+from fastapi import APIRouter
+
+# Import your new feature router
+from app.api.v1.endpoints import health
+
+# The main router for the v1 API
+api_router = APIRouter()
+
+# Include the new health router
+api_router.include_router(health.router, prefix="/health", tags=["Health"])
+
+# ... include other routers here
+# e.g., api_router.include_router(pets.router, prefix="/pets", tags=["Pets"])
+```
+
+Your main application file (`app/main.py`) should already be configured to include `api_router` from this file.
+
+---
+
+### **5. Unit Tests**
+
+Tests are crucial for ensuring feature reliability and preventing regressions. This test verifies the smoke test endpoint.
+
+**File:** `tests/api/v1/test_health.py`
+```python
+# File: tests/api/v1/test_health.py
+"""
+Unit tests for the health check API endpoints.
+Generated by the PetSage Backend Feature Builder Agent.
+"""
+import pytest
+from httpx import AsyncClient
+from fastapi import status
+from app.main import app  # Import your main FastAPI app instance
+from app.core.config import get_settings
+
+# Mark all tests in this module to use the asyncio backend
+pytestmark = pytest.mark.asyncio
+
+
+class TestHealthEndpoints:
+    """Test suite for /api/v1/health endpoints."""
+
+    async def test_smoke_test_success(self, client: AsyncClient):
+        """
+        Tests the GET /api/v1/health/smoke-test endpoint for a successful response.
+        """
+        # Arrange
+        settings = get_settings()
+        url = "/api/v1/health/smoke-test"
+        expected_response = {
+            "status": "ok",
+            "service_name": settings.PROJECT_NAME,
+            "service_version": settings.API_VERSION,
+        }
+
+        # Act
+        response = await client.get(url)
+
+        # Assert
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == expected_response
+```
+*Note: This test assumes you have a `pytest` setup with a `conftest.py` that provides an `AsyncClient` fixture named `client`.*
+
+---
+
+### **6. Documentation**
+
+This markdown can be used in your project's `README.md` or a dedicated API documentation page.
+
+````markdown
+# API Feature: Smoke Test
+
+**Generated by: PetSage Backend Feature Builder Agent**
+
+This document outlines the `smoke_test` health check endpoint.
+
+## Endpoint: `GET /api/v1/health/smoke-test`
+
+### Purpose
+
+This endpoint serves as a basic health check for the PetSage API. Its primary function is to confirm that the service is running, accessible, and able to process requests. It is a critical component for monitoring, automated deployment pipelines, and service discovery.
+
+### Request
+
+No request body or parameters are required.
+
+### Success Response (200 OK)
+
+**Content-Type:** `application/json`
+
+**Body:**
+
+```json
+{
+  "status": "ok",
+  "service_name": "PetSage API",
+  "service_version": "1.0.0"
+}
+```
+
+**Fields:**
+
+| Field             | Type   | Description                                     |
+| ----------------- | ------ | ----------------------------------------------- |
+| `status`          | string | The operational status of the service.          |
+| `service_name`    | string | The configured name of the service.             |
+| `service_version` | string | The current semantic version of the API.        |
+
+### Error Responses
+
+This endpoint is designed to be highly reliable and should not produce application-level errors. If the service is down, it will result in a standard network or HTTP-level error (e.g., connection refused, 502 Bad Gateway, 503 Service Unavailable).
+````
+
+`STATUS: COMPLETE`
+`MESSAGE: The 'smoke_test' feature module has been successfully generated and is ready for integration.`
