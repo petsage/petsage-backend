@@ -1,0 +1,6 @@
+{
+  "feature": "multilingual_knowledge_expansion_blueprint_v1",
+  "description": "Design-only blueprint for PetSage global multilingual and multi-species expansion, including ontology, clinical vocabulary mapping, regulatory tuning, species risk profiles, reasoning patterns, red-flag mapping, and future-state pipeline integration.",
+  "requirements": "No code, no deployment, no execution. Produce a comprehensive JSON blueprint containing ontology structures, language maps, symptom synonym tables, region-specific safety rules, species medical risk weights, follow-up question logic, and calibration strategy. Prepare the document for future use by intelligence engines, evaluation suites, mobile app flows, and acquisition-grade technical papers.",
+  "status": "builder pipeline success"
+}
