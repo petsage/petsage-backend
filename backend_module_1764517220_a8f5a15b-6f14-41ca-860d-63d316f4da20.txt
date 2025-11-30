@@ -1,0 +1,351 @@
+Greetings. I am the PetSage Backend Feature Builder Agent.
+
+Processing request...
+Base64 decoded payload: `{"feature":"smoke_test","description":"Ensure builder is functional","requirements":"none"}`
+
+Request validated. This is a system-level smoke test to verify my functionality. I will now generate the complete backend module, including API endpoints, Pydantic models, tests, documentation, and project structure, according to the PetSage System Blueprint.
+
+**Feature Generation Complete.**
+
+Here is the full deliverable for the `smoke_test` feature.
+
+***
+
+### **Project: PetSage Backend Service**
+### **Feature: System Smoke Test**
+**Description:** This module provides a basic `/api/v1/smoke_test` endpoint. Its purpose is to confirm that the API service is running, the routing is configured correctly, and the build agent is functional.
+
+---
+
+### **1. Project File Structure**
+
+```
+petsage_project/
+├── app/
+│   ├── __init__.py
+│   ├── api/
+│   │   ├── __init__.py
+│   │   └── v1/
+│   │       ├── __init__.py
+│   │       └── endpoints/
+│   │           ├── __init__.py
+│   │           └── smoke_test.py      # New API endpoint logic
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── smoke_test.py          # New Pydantic models
+│   └── main.py                    # Main application entrypoint
+├── tests/
+│   ├── __init__.py
+│   └── api/
+│       ├── __init__.py
+│       └── v1/
+│           ├── __init__.py
+│           └── test_smoke_test.py     # New tests for the endpoint
+├── .gitignore
+├── Dockerfile
+├── README.md                      # Updated documentation
+└── requirements.txt
+```
+
+---
+
+### **2. Generated Files & Code**
+
+#### **`README.md`**
+
+```markdown
+# PetSage Backend Service
+
+Welcome to the PetSage Backend Service. This service provides AI-powered wisdom and support for pet owners.
+
+## Feature: System Smoke Test
+
+This feature module adds a simple health-check endpoint to verify that the service is operational.
+
+- **Endpoint**: `GET /api/v1/smoke_test`
+- **Description**: Returns a success message confirming the service is running.
+- **Response**:
+  ```json
+  {
+    "status": "ok",
+    "message": "PetSage Smoke Test: Builder is functional!"
+  }
+  ```
+
+## Setup and Installation
+
+1.  **Create a virtual environment:**
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+    ```
+
+2.  **Install dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+## Running the Service
+
+Use Uvicorn to run the FastAPI application:
+
+```bash
+uvicorn app.main:app --reload
+```
+
+The API will be available at `http://127.0.0.1:8000`. You can access the auto-generated documentation at `http://127.0.0.1:8000/docs`.
+
+## Running Tests
+
+Execute the test suite using Pytest:
+
+```bash
+pytest
+```
+```
+
+#### **`requirements.txt`**
+
+```
+fastapi
+uvicorn[standard]
+pydantic
+pytest
+httpx
+```
+
+#### **`Dockerfile`**
+
+```dockerfile
+# Use an official Python runtime as a parent image
+FROM python:3.10-slim
+
+# Set the working directory in the container
+WORKDIR /code
+
+# Copy the requirements file into the container at /code
+COPY ./requirements.txt /code/requirements.txt
+
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+
+# Copy the app directory into the container at /code
+COPY ./app /code/app
+
+# Command to run the application
+# Binds to 0.0.0.0 to be accessible from outside the container
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+```
+
+#### **`.gitignore`**
+
+```
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE files
+.idea/
+.vscode/
+```
+
+#### **`app/main.py`**
+
+```python
+# app/main.py
+
+from fastapi import FastAPI
+from app.api.v1.endpoints import smoke_test
+
+# Initialize the FastAPI app
+# Following PetSage branding and documentation standards
+app = FastAPI(
+    title="PetSage AI Backend",
+    description="AI-powered wisdom for every pet owner.",
+    version="1.0.0",
+)
+
+# --- API Router Integration ---
+# Include the router for the smoke_test feature.
+# All routes in this router will be prefixed with /api/v1.
+app.include_router(smoke_test.router, prefix="/api/v1")
+
+@app.get("/", tags=["Root"])
+async def read_root():
+    """
+    A warm welcome to the PetSage API.
+    """
+    return {"message": "Welcome to the PetSage API. Visit /docs for more information."}
+
+```
+
+#### **`app/models/smoke_test.py`**
+
+```python
+# app/models/smoke_test.py
+
+from pydantic import BaseModel, Field
+
+class SmokeTestResponse(BaseModel):
+    """
+    Pydantic model for the smoke test response.
+    Ensures the response schema is consistent and validated.
+    """
+    status: str = Field(..., example="ok", description="The operational status of the service.")
+    message: str = Field(..., example="PetSage Smoke Test: Builder is functional!", description="A descriptive message indicating the test result.")
+
+    class Config:
+        # Provides an example for OpenAPI documentation
+        schema_extra = {
+            "example": {
+                "status": "ok",
+                "message": "PetSage Smoke Test: Builder is functional!"
+            }
+        }
+```
+
+#### **`app/api/v1/endpoints/smoke_test.py`**
+
+```python
+# app/api/v1/endpoints/smoke_test.py
+
+from fastapi import APIRouter
+from app.models.smoke_test import SmokeTestResponse
+
+# Create a new router instance for this feature
+router = APIRouter()
+
+@router.get(
+    "/smoke_test",
+    response_model=SmokeTestResponse,
+    tags=["System Health"],
+    summary="Performs a basic system smoke test",
+    description="This endpoint is used to verify that the API is running and responsive. It provides a simple, consistent success response."
+)
+async def run_smoke_test():
+    """
+    Handles the smoke test request.
+
+    Returns:
+        SmokeTestResponse: A JSON object confirming the builder and service are functional.
+    """
+    return SmokeTestResponse(
+        status="ok",
+        message="PetSage Smoke Test: Builder is functional!"
+    )
+```
+
+#### **`tests/api/v1/test_smoke_test.py`**
+
+```python
+# tests/api/v1/test_smoke_test.py
+
+from fastapi.testclient import TestClient
+from app.main import app
+
+# Initialize the test client with our FastAPI app
+client = TestClient(app)
+
+def test_smoke_test_endpoint():
+    """
+    Tests the /api/v1/smoke_test endpoint to ensure it's functioning correctly.
+    """
+    # GIVEN a request to the smoke test endpoint
+    response = client.get("/api/v1/smoke_test")
+
+    # THEN the status code should be 200 (OK)
+    assert response.status_code == 200
+
+    # AND the response JSON should match the expected format and content
+    expected_json = {
+        "status": "ok",
+        "message": "PetSage Smoke Test: Builder is functional!"
+    }
+    assert response.json() == expected_json
+
+def test_root_endpoint():
+    """
+    Tests the root endpoint '/' for a welcome message.
+    """
+    # GIVEN a request to the root endpoint
+    response = client.get("/")
+
+    # THEN the status code should be 200 (OK)
+    assert response.status_code == 200
+    assert response.json() == {"message": "Welcome to the PetSage API. Visit /docs for more information."}
+```
+
+#### **`__init__.py` files**
+
+These files should be created in their respective directories as empty files. They are necessary for Python to recognize the directories as packages.
+
+- `app/__init__.py`
+- `app/api/__init__.py`
+- `app/api/v1/__init__.py`
+- `app/api/v1/endpoints/__init__.py`
+- `app/models/__init__.py`
+- `tests/__init__.py`
+- `tests/api/__init__.py`
+- `tests/api/v1/__init__.py`
+
+***
+
+**Build Agent Status:** **SUCCESS.** The `smoke_test` feature has been successfully generated. Ready for next instruction.
