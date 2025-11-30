@@ -1,0 +1,281 @@
+Acknowledged. I am the PetSage Backend Feature Builder Agent. My purpose is to generate complete, production-ready FastAPI features according to the PetSage System Blueprint.
+
+Processing request...
+
+**Payload Received:**
+```json
+{
+  "message": {
+    "data": "eyJmZWF0dXJlIjoic21va2VfdGVzdCIsImRlc2NyaXB0aW9uIjoiQ2hlY2sgc3lzdGVtIGlzIGFsaXZlIiwicmVxdWlyZW1lbnRzIjoibm9uZSJ9"
+  }
+}
+```
+
+**Decoding Base64 Data...**
+Decoded Data:
+```json
+{
+  "feature": "smoke_test",
+  "description": "Check system is alive",
+  "requirements": "none"
+}
+```
+
+**Analysis:**
+- **Feature Name:** `smoke_test` (Interpreted as a System Health Check).
+- **Description:** A simple endpoint to confirm the API is operational.
+- **Requirements:** None. This is a public, non-authenticated endpoint.
+
+**Action Plan:**
+I will construct a new feature module named `system_health`. This module will provide a `GET /api/v1/system/health` endpoint. The response will be a JSON object confirming the service status, name, and version, adhering to best practices for health checks. The entire feature will be generated with models, router logic, tests, and integration instructions, following the PetSage System Blueprint.
+
+---
+
+### **Feature Generation Complete**
+
+Below is the full backend module for the `system_health` feature.
+
+### 1. File Structure
+
+Here is the complete directory and file structure for the new feature.
+
+```
+petsage_backend/
+└── features/
+    └── system_health/
+        ├── __init__.py
+        ├── models.py
+        ├── router.py
+        └── tests/
+            ├── __init__.py
+            └── test_router.py
+```
+
+### 2. Pydantic Models
+
+These models define the data structure for the health check response, ensuring type safety and clear API contracts.
+
+**File:** `features/system_health/models.py`
+```python
+"""
+Pydantic models for the System Health feature.
+
+This module defines the data structures for API responses related to system health checks.
+Following the PetSage System Blueprint, all data transfer objects are centralized here.
+"""
+from pydantic import BaseModel, Field
+from datetime import datetime
+
+class HealthCheckResponse(BaseModel):
+    """
+    Defines the response structure for the system health check endpoint.
+    """
+    service_name: str = Field(
+        ...,
+        example="PetSage Backend API",
+        description="The name of the service providing the response."
+    )
+    status: str = Field(
+        "ok",
+        example="ok",
+        description="Indicates the operational status of the service. 'ok' means healthy."
+    )
+    version: str = Field(
+        ...,
+        example="1.0.0",
+        description="The current version of the running service."
+    )
+    timestamp: datetime = Field(
+        ...,
+        description="The UTC timestamp when the health check was performed."
+    )
+
+    class Config:
+        # Pydantic V2 and later use 'json_schema_extra'
+        json_schema_extra = {
+            "example": {
+                "service_name": "PetSage Backend API",
+                "status": "ok",
+                "version": "1.0.0",
+                "timestamp": "2023-10-27T10:30:00.123Z"
+            }
+        }
+```
+
+### 3. FastAPI Router
+
+This file contains the API endpoint logic. It's a simple `GET` endpoint that returns the system's health status.
+
+**File:** `features/system_health/router.py`
+```python
+"""
+API Router for the System Health feature.
+
+This router provides endpoints to check the operational status of the PetSage API.
+"""
+from fastapi import APIRouter, status
+from datetime import datetime, timezone
+
+from .models import HealthCheckResponse
+
+# In a real application, version would be managed in a config file or via environment variables.
+APP_VERSION = "1.0.0" 
+
+router = APIRouter(
+    prefix="/system",
+    tags=["System"],
+    responses={404: {"description": "Not found"}},
+)
+
+@router.get(
+    "/health",
+    response_model=HealthCheckResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Perform a System Health Check",
+    description=(
+        "This endpoint can be used to verify that the PetSage API is running and responsive. "
+        "It provides a simple, unauthenticated way to monitor service health."
+    )
+)
+async def perform_health_check() -> HealthCheckResponse:
+    """
+    Checks if the system is alive and returns its status.
+
+    This is a crucial endpoint for monitoring, load balancers, and container orchestrators
+    like Kubernetes to determine the service's health.
+
+    **Safety Note:** This endpoint is designed to be public and does not expose any
+    sensitive system information.
+
+    Returns:
+        HealthCheckResponse: An object containing the service name, status, version, and timestamp.
+    """
+    return HealthCheckResponse(
+        service_name="PetSage Backend API",
+        version=APP_VERSION,
+        timestamp=datetime.now(timezone.utc)
+    )
+```
+
+### 4. Unit Tests
+
+Robust tests are essential. This test file uses `pytest` and FastAPI's `TestClient` to validate the new endpoint's functionality.
+
+**File:** `features/system_health/tests/test_router.py`
+```python
+"""
+Tests for the System Health router.
+
+These tests ensure the /health endpoint is functioning correctly.
+"""
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from datetime import datetime, timezone
+
+from ..router import router as system_health_router
+
+# Create a minimal FastAPI app for testing purposes
+app = FastAPI()
+app.include_router(system_health_router, prefix="/api/v1")
+
+client = TestClient(app)
+
+def test_health_check_success():
+    """
+    Tests that the GET /api/v1/system/health endpoint returns a 200 OK status
+    and the correct response structure.
+    """
+    # Arrange: Record the time before the request
+    start_time = datetime.now(timezone.utc)
+    
+    # Act: Make the request to the health check endpoint
+    response = client.get("/api/v1/system/health")
+    
+    # Assert: Check the status code
+    assert response.status_code == 200
+    
+    # Assert: Check the response body
+    data = response.json()
+    assert data["service_name"] == "PetSage Backend API"
+    assert data["status"] == "ok"
+    assert "version" in data
+    assert "timestamp" in data
+    
+    # Assert: Verify the timestamp is a valid ISO 8601 format and is recent
+    response_timestamp = datetime.fromisoformat(data["timestamp"])
+    assert response_timestamp.tzinfo is not None # Ensure it's timezone-aware
+    
+    # Check if the response timestamp is within a reasonable window (e.g., 5 seconds)
+    time_delta = response_timestamp - start_time
+    assert time_delta.total_seconds() < 5
+    assert time_delta.total_seconds() >= 0
+
+def test_health_check_has_correct_headers():
+    """
+    Tests that the response has the expected Content-Type header.
+    """
+    # Act
+    response = client.get("/api/v1/system/health")
+
+    # Assert
+    assert response.headers["content-type"] == "application/json"
+```
+
+### 5. Orchestration Pipeline Integration
+
+To activate this new feature, the `system_health` router must be included in the main FastAPI application instance.
+
+**Example:** `main.py`
+```python
+"""
+Main PetSage Backend Application.
+
+This file initializes the FastAPI application and includes all feature routers.
+"""
+from fastapi import FastAPI
+from contextlib import asynccontextmanager
+
+# Import routers from the features directory
+from features.system_health.router import router as system_health_router
+# from features.pet_profiles.router import router as pet_profiles_router # Example of another feature
+# from features.user_accounts.router import router as user_accounts_router # Example of another feature
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Code to run on startup
+    print("PetSage API starting up...")
+    yield
+    # Code to run on shutdown
+    print("PetSage API shutting down...")
+
+app = FastAPI(
+    title="PetSage API",
+    description="The official backend API for the PetSage application. Your pet's wise companion.",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# --- Include Feature Routers ---
+# It's best practice to version the API.
+API_V1_PREFIX = "/api/v1"
+
+# Include the newly created system health router
+app.include_router(system_health_router, prefix=API_V1_PREFIX)
+
+# Include other feature routers here as they are built
+# app.include_router(pet_profiles_router, prefix=API_V1_PREFIX)
+# app.include_router(user_accounts_router, prefix=API_V1_PREFIX)
+
+@app.get("/", tags=["Root"], include_in_schema=False)
+async def root():
+    """Redirects to the API documentation."""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/docs")
+
+```
+
+---
+**Summary:**
+
+The `system_health` feature has been successfully generated. It is a self-contained module with clear responsibilities, following PetSage design principles. It includes a versioned API endpoint, robust Pydantic models, comprehensive unit tests, and clear instructions for integration into the main application. This feature is ready for code review and deployment.
