@@ -1,0 +1,197 @@
+> PetSage Backend Feature Builder Agent: Activated.
+> System Initializing...
+> Decoding Payload...
+> Feature Request Identified: `smoke_test`
+> Description: "Ensure builder is functional"
+> Requirements: "none"
+> Commencing build process based on PetSage System Blueprint.
+
+### **Analysis & Plan**
+
+The requested feature is a `smoke_test`, a simple system health check endpoint. This will serve as a foundational "hello world" to confirm the backend service is running and the feature builder agent is operating correctly.
+
+**Plan:**
+1.  **Create a new feature module:** `smoke_test`
+2.  **Define Pydantic Schemas:** A response model for the smoke test result.
+3.  **Implement the API Router:** A GET endpoint at `/api/v1/system/smoke-test` that returns a success message.
+4.  **Integrate the Router:** Wire the new router into the main v1 API router.
+5.  **Write Unit Tests:** Create a `pytest` test case to validate the endpoint's functionality and response.
+6.  **Generate Documentation:** Provide clear, auto-generating documentation via FastAPI's OpenAPI integration and code docstrings.
+7.  **Package the output:** Present the complete file structure and code for deployment.
+
+---
+
+### **Generated File Structure**
+
+Here is the complete file structure for the new `smoke_test` feature.
+
+```
+petsage_project/
+├── src/
+│   ├── api/
+│   │   ├── __init__.py
+│   │   ├── smoke_test/             # <-- NEW DIRECTORY
+│   │   │   ├── __init__.py         # <-- NEW FILE
+│   │   │   ├── router.py           # <-- NEW FILE
+│   │   │   └── schemas.py          # <-- NEW FILE
+│   │   └── v1/
+│   │       ├── __init__.py
+│   │       └── api.py              # <-- MODIFIED FILE
+│   ├── core/
+│   │   └── ...
+│   └── main.py
+└── tests/
+    └── api/
+        └── v1/
+            ├── __init__.py
+            └── test_smoke_test.py  # <-- NEW FILE
+```
+
+---
+
+### **Generated Code Modules**
+
+Below are the contents for the new and modified files.
+
+#### **1. Pydantic Schemas**
+This file defines the data structures for our API endpoint, ensuring type safety and clear contracts.
+
+**File:** `src/api/smoke_test/schemas.py`
+```python
+# src/api/smoke_test/schemas.py
+
+from pydantic import BaseModel, Field
+
+class SmokeTestResponse(BaseModel):
+    """
+    Response model for the smoke test endpoint.
+    Confirms that the service is operational.
+    """
+    status: str = Field(
+        ...,
+        example="ok",
+        description="The operational status of the service."
+    )
+    message: str = Field(
+        ...,
+        example="PetSage Smoke Test: Builder is functional!",
+        description="A confirmation message from the service."
+    )
+
+```
+
+#### **2. API Router**
+This file contains the actual API endpoint logic for the smoke test.
+
+**File:** `src/api/smoke_test/router.py`
+```python
+# src/api/smoke_test/router.py
+
+from fastapi import APIRouter, status
+from src.api.smoke_test.schemas import SmokeTestResponse
+
+# Create a new router for this feature
+router = APIRouter()
+
+@router.get(
+    "/smoke-test",
+    response_model=SmokeTestResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Perform a System Smoke Test",
+    description="A simple health check endpoint to verify that the API service is up and running.",
+    tags=["System"] # Group this endpoint under "System" in the API docs
+)
+async def perform_smoke_test():
+    """
+    Ensures the builder is functional by returning a success response.
+    
+    This endpoint is a fundamental check to confirm service availability
+    and basic functionality.
+    """
+    return SmokeTestResponse(
+        status="ok",
+        message="PetSage Smoke Test: Builder is functional!"
+    )
+
+```
+
+#### **3. Orchestration Pipeline Integration**
+This modified file integrates our new `smoke_test` router into the main v1 API, making it accessible.
+
+**File:** `src/api/v1/api.py`
+```python
+# src/api/v1/api.py
+
+from fastapi import APIRouter
+
+# Import the new router
+from src.api.smoke_test.router import router as smoke_test_router
+
+# The main router for the v1 API
+api_v1_router = APIRouter()
+
+# Include the smoke test router
+# It will be accessible at the path prefix defined here.
+api_v1_router.include_router(
+    smoke_test_router, 
+    prefix="/system", 
+)
+
+# ... other feature routers would be included here in the future
+# e.g., api_v1_router.include_router(pet_profile_router, prefix="/pets", tags=["Pets"])
+
+```
+
+#### **4. Unit Tests**
+This test file ensures the new endpoint behaves as expected. It uses `httpx` for asynchronous requests against the test application.
+
+**File:** `tests/api/v1/test_smoke_test.py`
+```python
+# tests/api/v1/test_smoke_test.py
+
+import pytest
+from httpx import AsyncClient
+from fastapi import status
+
+from src.main import app # Import the main FastAPI app
+
+@pytest.mark.asyncio
+async def test_smoke_test_success():
+    """
+    Tests the smoke test endpoint for a successful response.
+    """
+    # Use the test client to make requests to the app
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.get("/api/v1/system/smoke-test")
+
+    # 1. Assert the HTTP status code is 200 OK
+    assert response.status_code == status.HTTP_200_OK
+
+    # 2. Assert the response body matches the expected schema and content
+    response_data = response.json()
+    expected_data = {
+        "status": "ok",
+        "message": "PetSage Smoke Test: Builder is functional!"
+    }
+    assert response_data == expected_data
+```
+
+---
+
+### **Deployment & Verification**
+
+1.  **Place Files:** Add the new files and directories to your project as specified in the structure above.
+2.  **Run Server:** Start the FastAPI application using Uvicorn:
+    ```bash
+    uvicorn src.main:app --reload
+    ```
+3.  **Run Tests:** Execute the test suite to verify the feature's correctness:
+    ```bash
+    pytest
+    ```
+    The `test_smoke_test_success` test should pass.
+4.  **Verify via API Docs:** Navigate to `http://127.0.0.1:8000/docs` in your browser. You will see the new "System" section with the `/api/v1/system/smoke-test` endpoint. You can execute it directly from the documentation page.
+
+> **Build Complete.** The `smoke_test` feature has been successfully generated and integrated according to the PetSage System Blueprint. The system is ready for the next feature request.
+>
+> PetSage Backend Feature Builder Agent: Standing by.
