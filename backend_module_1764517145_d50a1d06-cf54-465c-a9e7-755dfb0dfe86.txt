@@ -1,0 +1,274 @@
+`STATUS: ACKNOWLEDGED`
+`PAYLOAD RECEIVED`
+`AGENT: PetSage Backend Feature Builder`
+`TASK: Generate 'smoke_test' feature module`
+
+`Initializing feature build process...`
+`Decoding payload...`
+`Feature: smoke_test`
+`Description: Ensure builder functional`
+`Requirements: none`
+`Analysis: Request is for a system health check or smoke test endpoint. This will verify that the API server is running and the basic routing/response structure is functional. Proceeding with generation.`
+`-------------------------------------------------`
+
+Greetings. I am the PetSage Backend Feature Builder Agent. I have processed your request and generated the complete module for the `smoke_test` feature, adhering to the PetSage System Blueprint.
+
+### 1. File Structure
+
+Here is the complete file and directory structure for the new `smoke_test` feature.
+
+```plaintext
+petsage_api/
+├── api/
+│   └── v1/
+│       ├── api.py                  # MODIFIED: Main v1 router
+│       └── endpoints/
+│           └── smoke_test.py       # NEW: Endpoint for the smoke test
+├── models/
+│   └── smoke_test.py               # NEW: Pydantic models for the smoke test
+├── services/
+│   └── smoke_test_service.py       # NEW: Business logic for the smoke test
+└── tests/
+    └── api/
+        └── v1/
+            └── test_smoke_test.py  # NEW: Pytest tests for the endpoint
+```
+
+---
+
+### 2. Code Implementation
+
+Below are the contents for the new and modified files.
+
+#### **`petsage_api/models/smoke_test.py`** (New File)
+
+This file defines the data structure for the API response, ensuring type safety and clear contracts.
+
+```python
+# petsage_api/models/smoke_test.py
+
+"""
+Pydantic models for the Smoke Test feature.
+
+This module defines the data structures used for API responses
+in the smoke test endpoint, ensuring data validation and serialization.
+"""
+
+from pydantic import BaseModel, Field
+
+
+class SmokeTestResponse(BaseModel):
+    """
+    Defines the response structure for a successful smoke test.
+    """
+    status: str = Field(
+        default="ok",
+        description="The operational status of the PetSage system.",
+        examples=["ok"]
+    )
+    message: str = Field(
+        description="A confirmation message from the PetSage service.",
+        examples=["PetSage Backend is awake and purring!"]
+    )
+    feature_name: str = Field(
+        ...,
+        description="The name of the feature being tested.",
+        examples=["smoke_test"]
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "ok",
+                "message": "PetSage Backend is awake and purring!",
+                "feature_name": "smoke_test"
+            }
+        }
+```
+
+#### **`petsage_api/services/smoke_test_service.py`** (New File)
+
+This file contains the core business logic. For a smoke test, this is minimal but demonstrates the separation of concerns.
+
+```python
+# petsage_api/services/smoke_test_service.py
+
+"""
+Service layer for the Smoke Test feature.
+
+This module contains the business logic for executing a system smoke test.
+"""
+from typing import Dict, Any
+
+
+def run_smoke_test() -> Dict[str, Any]:
+    """
+    Executes the logic for the smoke test.
+
+    In a real-world scenario, this could check database connections,
+    cache availability, or other critical infrastructure.
+
+    Returns:
+        A dictionary containing the status and a success message.
+    """
+    return {
+        "status": "ok",
+        "message": "PetSage Backend is awake and purring!",
+        "feature_name": "smoke_test"
+    }
+```
+
+#### **`petsage_api/api/v1/endpoints/smoke_test.py`** (New File)
+
+This file defines the actual API endpoint using FastAPI.
+
+```python
+# petsage_api/api/v1/endpoints/smoke_test.py
+
+"""
+API endpoint for the system smoke test.
+
+Provides a simple GET endpoint to verify that the service is running.
+"""
+
+from fastapi import APIRouter
+
+from petsage_api.models.smoke_test import SmokeTestResponse
+from petsage_api.services import smoke_test_service
+
+router = APIRouter()
+
+
+@router.get(
+    "/smoke_test",
+    response_model=SmokeTestResponse,
+    tags=["System"],
+    summary="Perform a System Smoke Test",
+    description="This endpoint verifies that the PetSage API is running and able to process requests. It serves as a basic health check.",
+)
+def perform_smoke_test():
+    """
+    Handles the incoming request for a smoke test.
+    
+    Invokes the smoke test service and returns its result, confirming
+    that the system is operational.
+    """
+    result = smoke_test_service.run_smoke_test()
+    return result
+
+```
+
+---
+
+### 3. Integration into Orchestration Pipeline
+
+To activate the new endpoint, it must be included in the main API router.
+
+#### **`petsage_api/api/v1/api.py`** (Modified File)
+
+Add the following lines to include the `smoke_test` router.
+
+```python
+# petsage_api/api/v1/api.py
+
+from fastapi import APIRouter
+
+# Import new endpoint router
+from petsage_api.api.v1.endpoints import smoke_test
+
+# This is the main router for the v1 API
+api_v1_router = APIRouter()
+
+# Include the new smoke_test router
+# All routes from smoke_test.py will be prefixed with nothing extra
+# (e.g., /api/v1/smoke_test)
+api_v1_router.include_router(smoke_test.router)
+
+# ... include other feature routers here as they are built
+# e.g., api_v1_router.include_router(pet_profile.router, prefix="/pets")
+```
+
+---
+
+### 4. Tests
+
+Unit tests are critical for ensuring feature stability and preventing regressions. This test verifies the endpoint's functionality.
+
+#### **`petsage_api/tests/api/v1/test_smoke_test.py`** (New File)
+
+```python
+# petsage_api/tests/api/v1/test_smoke_test.py
+
+"""
+Tests for the /smoke_test endpoint.
+"""
+from fastapi.testclient import TestClient
+from petsage_api.main import app  # Assuming your main app object is in main.py
+
+client = TestClient(app)
+
+
+def test_smoke_test_success():
+    """
+    Tests the GET /api/v1/smoke_test endpoint for a successful response.
+    """
+    # Arrange: The API endpoint URL
+    url = "/api/v1/smoke_test"
+
+    # Act: Make a request to the endpoint
+    response = client.get(url)
+
+    # Assert: Check the response
+    assert response.status_code == 200
+    
+    response_data = response.json()
+    assert response_data["status"] == "ok"
+    assert response_data["feature_name"] == "smoke_test"
+    assert "PetSage Backend is awake and purring!" in response_data["message"]
+
+def test_smoke_test_headers():
+    """
+    Tests that the response headers are correct.
+    """
+    # Arrange
+    url = "/api/v1/smoke_test"
+
+    # Act
+    response = client.get(url)
+
+    # Assert
+    assert response.headers["content-type"] == "application/json"
+```
+
+---
+
+### 5. Documentation
+
+This is a snippet for the project's `README.md` to document the new feature.
+
+#### **`README.md` Snippet**
+
+```markdown
+## API Endpoints
+
+### System
+
+#### `GET /api/v1/smoke_test`
+
+Performs a system smoke test to verify API health.
+
+-   **Description**: This endpoint is a basic health check. A successful `200 OK` response indicates that the PetSage backend service is running and capable of handling requests. It should be the first endpoint to check when diagnosing system issues.
+-   **Success Response (`200 OK`)**:
+    ```json
+    {
+      "status": "ok",
+      "message": "PetSage Backend is awake and purring!",
+      "feature_name": "smoke_test"
+    }
+    ```
+-   **Error Responses**: None expected. If this endpoint fails, it indicates a critical server-level problem.
+```
+
+`-------------------------------------------------`
+`TASK COMPLETED. The 'smoke_test' feature module has been generated and is ready for integration and deployment. This successful build verifies the core functionality of the PetSage Backend Feature Builder Agent.`
+`STATUS: DONE`
