@@ -1,0 +1,6 @@
+{
+  "feature": "petsage_ops_guardian_super_unified_builder_v1",
+  "description": "Build full Ops Guardian stack with autoheal, RCA, CMDB, observability, hooks for backend-v52, backend-builder, mobile-builder, eval pipeline. Generate full folder ops_guardian/, Dockerfile, service_main.py, routers, IAM bindings, GCS CMDB bucket, dashboards, and documentation generator. Apply required patches to existing services without modifying business logic. Full PetSage neon branding.",
+  "requirements": "1) Generate complete ops_guardian folder with runnable code. 2) Wire safe callbacks into backend-v52, backend-builder, mobile-builder, eval pipeline. 3) Add new IAM permissions for ops guardian service account. 4) Generate CMDB builder, RCA engine, autoheal engine, dashboards. 5) Build full documentation generator. 6) Produce ready-to-deploy Dockerfile. 7) MUST NOT break any existing system. 8) Everything must run inside Cloud Run with no additional infra required.",
+  "status": "builder pipeline success"
+}
