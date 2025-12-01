@@ -1,0 +1,6 @@
+{
+  "feature": "deploy_ops_guardian_full_stack",
+  "description": "",
+  "requirements": "Execute unified builder to assemble and deploy Ops Guardian full-suite with branding, auto-heal, RCA, CMDB, audit pipeline, observability and safety governance. Use all agent_artifacts/*.json already present. Enterprise-grade, fully automated, no conflicts, run isolated.",
+  "status": "builder pipeline success"
+}
