@@ -1,0 +1,6 @@
+{
+  "feature": "petsage_ops_guardian_super_unified_builder_execute_v1",
+  "description": "",
+  "requirements": "Execute the full Ops Guardian enterprise build: generate full folder structure, engines, dashboards, exporters, autoheal logic, RCA engine, CMDB starter pack, branding assets, wiring files, IAM commands, Cloud Run service manifests, monitoring templates, patch pipeline templates, and integration shims for backend-v52, backend-builder, mobile-builder. Include all branding and enterprise-grade logic exactly as previously scoped. No placeholders. No stubs. Produce all artifacts required for deployment in agent_artifacts/ops_guardian_build/.",
+  "status": "builder pipeline success"
+}
