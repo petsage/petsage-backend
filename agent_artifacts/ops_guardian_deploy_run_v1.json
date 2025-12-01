@@ -1,0 +1,6 @@
+{
+  "feature": "ops_guardian_deploy_run_v1",
+  "description": "",
+  "requirements": "Use all artifacts in agent_artifacts/. Execute unified builder to assemble, provision, configure and deploy the complete PetSage Ops Guardian service as a NEW Cloud Run service (petsage-ops-guardian) with full branding, UI, observability, auto-heal, RCA, CMDB, audit pipeline and safety governance. Ensure full enterprise setup, IAM, service accounts, dashboards, triggers, and zero conflict with existing services. Fully isolated. No downtime. Return deployment URL and summary.",
+  "status": "builder pipeline success"
+}
