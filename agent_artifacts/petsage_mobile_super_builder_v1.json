@@ -1,0 +1,6 @@
+{
+  "feature": "petsage_mobile_super_builder_v1",
+  "description": "Full autonomous enterprise-grade PetSage mobile application build. Include branding, neon theme engine, navigation v4, onboarding, multi-pet profiles, triage UI, symptom capture, video/image upload, full What-To-Do-Next engine, red flags UX, vet notes UI, subscription flow with apple/google placeholders, settings, multilingual support, offline mode, full tests, documentation, observability notes, AI safety integration, CMDB draft, security notes, build pipeline files, and complete GitHub branch creation.",
+  "requirements": "Read entire petsage-mobile repo. Read all agent_artifacts/*.json for architecture, safety, compliance, orchestrators, observability, knowledge expansion, and guardian logic. Build full enterprise-grade mobile app end-to-end with no placeholders, no stubs, all screens implemented, fully wired to backend endpoints. Commit everything to a new branch named agentic-mobile-build-v1. Ensure isolation from backend builder processes. Follow PetSage neon brand rules strictly. Produce architecture docs, flows, CMDB draft, and final readiness docs inside /docs. Perfect execution required.",
+  "status": "builder pipeline success"
+}
