@@ -1,6 +1,6 @@
 {
   "feature": "smoke_test",
-  "description": "just testing",
+  "description": "prebuild_smoke",
   "requirements": "none",
   "status": "builder pipeline success"
 }
